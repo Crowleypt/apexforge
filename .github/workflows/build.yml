@@ -61,7 +61,6 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          no-cache: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/apexforge:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/apexforge:${{ github.sha }}
