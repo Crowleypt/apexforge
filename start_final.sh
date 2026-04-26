@@ -62,18 +62,6 @@ setup_comfyui() {
     fi
 }
 
-install_sageattention() {
-    if python -c "import sageattention" 2>/dev/null; then
-        echo "SageAttention already installed."
-        return
-    fi
-    echo "Installing SageAttention (requires GPU - first boot only)..."
-    git clone https://github.com/thu-ml/SageAttention.git /comfyui/SageAttention
-    cd /comfyui/SageAttention
-    pip install --no-cache-dir -e . --no-build-isolation
-    cd /
-    echo "SageAttention installed."
-}
 # Function to download Juggernaut XL model
 download_model() {
     echo "=========================================="
@@ -349,52 +337,90 @@ download_utility_models() {
 # Function to download pre-built workflows into the user workflows folder
 setup_workflows() {
     echo "=========================================="
-    echo "Setting up pre-built workflows..."
+    echo "Setting up ApexForge curated workflows..."
     echo "=========================================="
 
+    # Base URL for official Comfy-Org workflow templates
+    TEMPLATE_BASE="https://raw.githubusercontent.com/Comfy-Org/workflow_templates/main/templates"
+
+    # Root workflows dir
     WORKFLOWS_DIR="$COMFYUI_DIR/user/default/workflows"
-    mkdir -p "$WORKFLOWS_DIR"
 
-    # -------------------------------------------------------
-    # Clone official Comfy-Org workflow templates
-    # This gives us official workflows for ALL our models:
-    # Z-Image, FLUX Dev, FLUX Kontext, Wan2.1, Wan2.2,
-    # InfiniteTalk, ACE-Step, MMAudio, and more
-    # -------------------------------------------------------
-    TEMPLATES_DIR="$WORKFLOWS_DIR/official_templates"
-    if [ ! -d "$TEMPLATES_DIR/.git" ]; then
-        echo "Cloning official ComfyUI workflow templates..."
-        git clone --depth=1 \
-            https://github.com/Comfy-Org/workflow_templates.git \
-            "$TEMPLATES_DIR" || echo "WARNING: Could not clone workflow templates."
-    else
-        echo "Updating official workflow templates..."
-        cd "$TEMPLATES_DIR"
-        git pull || echo "WARNING: Could not update workflow templates."
-        cd "$COMFYUI_DIR"
-    fi
+    # Create curated folder structure
+    mkdir -p "$WORKFLOWS_DIR/01 - Image Generation"
+    mkdir -p "$WORKFLOWS_DIR/02 - Image Editing"
+    mkdir -p "$WORKFLOWS_DIR/03 - Video Generation"
+    mkdir -p "$WORKFLOWS_DIR/04 - Talking Avatars"
+    mkdir -p "$WORKFLOWS_DIR/05 - Audio"
+    mkdir -p "$WORKFLOWS_DIR/06 - Post Processing"
 
-    # -------------------------------------------------------
-    # Copy the actual JSON workflow files to the root workflows dir
-    # so they show up directly in ComfyUI's workflow browser
-    # -------------------------------------------------------
-    if [ -d "$TEMPLATES_DIR/templates" ]; then
-        echo "Copying workflow JSONs to workflow browser..."
-        cp -n "$TEMPLATES_DIR/templates/"*.json "$WORKFLOWS_DIR/" 2>/dev/null || true
-        echo "Workflows copied."
-    fi
+    # Helper: download only if file doesn't exist yet
+    dl() {
+        local dest="$1"
+        local url="$2"
+        if [ ! -f "$dest" ]; then
+            wget -q -O "$dest" "$url" && echo "  ✓ $(basename $dest)" || echo "  ✗ FAILED: $(basename $dest)"
+        else
+            echo "  ✓ $(basename $dest) already exists"
+        fi
+    }
+
+    # ── 01 Image Generation ──────────────────────────────────
+    echo "--- Image Generation ---"
+    dl "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo.json" \
+        "$TEMPLATE_BASE/image_z_image_turbo.json"
+    dl "$WORKFLOWS_DIR/01 - Image Generation/z_image_base.json" \
+        "$TEMPLATE_BASE/image_z_image.json"
+    dl "$WORKFLOWS_DIR/01 - Image Generation/flux_dev.json" \
+        "$TEMPLATE_BASE/image_flux_1_dev.json"
+    dl "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_xl.json" \
+        "$TEMPLATE_BASE/image_sd_xl.json"
+
+    # ── 02 Image Editing ─────────────────────────────────────
+    echo "--- Image Editing ---"
+    dl "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json" \
+        "$TEMPLATE_BASE/image_flux_1_kontext_dev.json"
+
+    # ── 03 Video Generation ──────────────────────────────────
+    echo "--- Video Generation ---"
+    dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.2_image_to_video.json" \
+        "$TEMPLATE_BASE/video_wan2_2_14B_i2v.json"
+    dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.2_text_to_video.json" \
+        "$TEMPLATE_BASE/video_wan2_2_14B_t2v.json"
+    dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.1_image_to_video.json" \
+        "$TEMPLATE_BASE/video_wan2_1_14B_i2v.json"
+
+    # ── 04 Talking Avatars ───────────────────────────────────
+    echo "--- Talking Avatars ---"
+    dl "$WORKFLOWS_DIR/04 - Talking Avatars/infinitetalk_single.json" \
+        "$TEMPLATE_BASE/video_wan2_1_infinitetalk_i2v.json"
+    dl "$WORKFLOWS_DIR/04 - Talking Avatars/multitalk.json" \
+        "$TEMPLATE_BASE/video_wan2_1_multitalk.json"
+
+    # ── 05 Audio ─────────────────────────────────────────────
+    echo "--- Audio ---"
+    dl "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json" \
+        "$TEMPLATE_BASE/audio_ace_step_1_5.json"
+    dl "$WORKFLOWS_DIR/05 - Audio/mmaudio_video_sound.json" \
+        "$TEMPLATE_BASE/audio_mmaudio.json"
+
+    # ── 06 Post Processing ───────────────────────────────────
+    echo "--- Post Processing ---"
+    dl "$WORKFLOWS_DIR/06 - Post Processing/upscale_image.json" \
+        "$TEMPLATE_BASE/image_upscale.json"
+    dl "$WORKFLOWS_DIR/06 - Post Processing/face_restore_codeformer.json" \
+        "$TEMPLATE_BASE/image_face_restore.json"
+    dl "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json" \
+        "$TEMPLATE_BASE/video_frame_interpolation.json"
 
     echo "=========================================="
-    echo "Workflows available in ComfyUI workflow browser!"
-    echo "Key workflows included:"
-    echo "  image_z_image_turbo.json       - Z-Image Turbo T2I"
-    echo "  image_flux_1_dev.json          - FLUX Dev T2I"
-    echo "  image_flux_1_kontext_dev.json  - FLUX Kontext image editing"
-    echo "  video_wan2_2_14B_i2v.json      - Wan2.2 image-to-video"
-    echo "  video_wan2_2_14B_t2v.json      - Wan2.2 text-to-video"
-    echo "  audio_ace_step_1_5.json        - ACE-Step music generation"
-    echo "  video_wan2_1_infinitetalk.json - InfiniteTalk talking video"
-    echo "  ...and many more"
+    echo "ApexForge workflows ready!"
+    echo "  01 - Image Generation  (Z-Image Turbo, Z-Image Base, FLUX Dev, Juggernaut)"
+    echo "  02 - Image Editing     (FLUX Kontext)"
+    echo "  03 - Video Generation  (Wan2.2 I2V, Wan2.2 T2V, Wan2.1 I2V)"
+    echo "  04 - Talking Avatars   (InfiniteTalk, MultiTalk)"
+    echo "  05 - Audio             (ACE-Step Music, MMAudio)"
+    echo "  06 - Post Processing   (Upscale, Face Restore, RIFE)"
     echo "=========================================="
 }
 
@@ -910,7 +936,6 @@ echo "=========================================="
 wait_for_network
 start_jupyter
 setup_comfyui
-install_sageattention
 install_custom_nodes
 setup_workflows
 download_model
