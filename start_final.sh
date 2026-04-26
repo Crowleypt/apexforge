@@ -13,8 +13,8 @@ VAE_DIR="$COMFYUI_DIR/models/vae"
 # Without this, Civitai downloads (Juggernaut, Skin Texture LoRA) may fail silently
 CIVITAI_TOKEN="${CIVITAI_TOKEN:-}"
 
-# --- Use system Python (has PyTorch 2.11.0 stable + SageAttention baked into image) ---
-# No venv needed — everything is installed at the system level in the Docker image
+# --- Use system Python (has PyTorch 2.10.0 stable baked into image) ---
+# SageAttention is installed at runtime on first boot (requires live GPU)
 
 # --- Function Definitions ---
 
@@ -890,7 +890,27 @@ start_comfyui() {
     else
         echo "# Add one argument per line" > "$ARGS_FILE"
         echo "--preview-method auto" >> "$ARGS_FILE"
-        echo "--use-sage-attention" >> "$ARGS_FILE"
+        # Only add --use-sage-attention if SageAttention is actually installed
+        # It will be added automatically on next boot once installed
+        if python -c "import sageattention" 2>/dev/null; then
+            echo "--use-sage-attention" >> "$ARGS_FILE"
+        fi
+    fi
+
+    # If args file exists but sage attention flag is set without the package, remove it
+    if [ -f "$ARGS_FILE" ] && grep -q "use-sage-attention" "$ARGS_FILE"; then
+        if ! python -c "import sageattention" 2>/dev/null; then
+            echo "WARNING: SageAttention not installed — removing --use-sage-attention flag"
+            sed -i '/use-sage-attention/d' "$ARGS_FILE"
+        fi
+    fi
+
+    # If SageAttention is now installed, add the flag if not already present
+    if python -c "import sageattention" 2>/dev/null; then
+        if ! grep -q "use-sage-attention" "$ARGS_FILE"; then
+            echo "--use-sage-attention" >> "$ARGS_FILE"
+            echo "SageAttention detected — enabled in ComfyUI args"
+        fi
     fi
 
     echo "=========================================="
@@ -921,9 +941,52 @@ wait_for_network() {
 }
 
 # --- Main Program ---
+
+# Function to install SageAttention at runtime (requires live GPU)
+install_sageattention() {
+    if python -c "import sageattention" 2>/dev/null; then
+        echo "SageAttention already installed — skipping."
+        return
+    fi
+
+    echo "=========================================="
+    echo "Installing SageAttention (first boot only)"
+    echo "This requires a live GPU and takes 10-15 mins"
+    echo "=========================================="
+
+    # Install cupy pre-built wheel first — avoids compilation failure
+    # Use the cu128 pre-built wheel matching our CUDA version
+    pip install --no-cache-dir cupy-cuda12x 2>/dev/null || \
+        echo "WARNING: cupy install failed — SageAttention may still work without it"
+
+    # Clone and install SageAttention from source
+    SAGE_DIR="/comfyui/SageAttention"
+    if [ ! -d "$SAGE_DIR" ]; then
+        git clone https://github.com/thu-ml/SageAttention.git "$SAGE_DIR"
+    fi
+
+    cd "$SAGE_DIR"
+    # Pull latest in case repo already exists from previous attempt
+    git pull 2>/dev/null || true
+
+    # Install with TORCH_CUDA_ARCH_LIST set for sm_120
+    TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;12.0" \
+        pip install --no-cache-dir -e . --no-build-isolation
+
+    cd /
+
+    # Verify
+    if python -c "import sageattention; print('SageAttention OK:', sageattention.__version__)" 2>/dev/null; then
+        echo "SageAttention installed successfully!"
+    else
+        echo "WARNING: SageAttention install failed — ComfyUI will run without it"
+        echo "This is non-fatal. Everything else works normally."
+    fi
+}
+
 echo "=========================================="
 echo "RunPod ComfyUI - RTX 5090 / Blackwell"
-echo "CUDA 12.8 + PyTorch 2.11.0 stable + SageAttention"
+echo "CUDA 12.8 + PyTorch 2.10.0 stable + SageAttention"
 echo "=========================================="
 
 if [ -d "$COMFYUI_DIR" ]; then
@@ -936,6 +999,7 @@ echo "=========================================="
 wait_for_network
 start_jupyter
 setup_comfyui
+install_sageattention
 install_custom_nodes
 setup_workflows
 download_model
