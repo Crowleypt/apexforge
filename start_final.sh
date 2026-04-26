@@ -365,28 +365,62 @@ setup_workflows() {
         fi
     }
 
+    # Helper: patch model filename in workflow JSON
+    # Usage: patch_model "workflow.json" "old_name.safetensors" "new_name.safetensors"
+    patch_model() {
+        local file="$1"
+        local old="$2"
+        local new="$3"
+        if [ -f "$file" ]; then
+            sed -i "s|${old}|${new}|g" "$file"
+        fi
+    }
+
     # ── 01 Image Generation ──────────────────────────────────
     echo "--- Image Generation ---"
     dl "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo.json" \
         "$TEMPLATE_BASE/image_z_image_turbo.json"
+    # z_image_turbo uses correct filenames — no patch needed
+
     dl "$WORKFLOWS_DIR/01 - Image Generation/z_image_base.json" \
         "$TEMPLATE_BASE/image_z_image.json"
+    # z_image_base uses correct filenames — no patch needed
+
     dl "$WORKFLOWS_DIR/01 - Image Generation/flux_dev.json" \
         "$TEMPLATE_BASE/image_flux_1_dev.json"
+    # Official workflow expects flux1-dev.safetensors — we have flux1-dev-fp8.safetensors
+    patch_model "$WORKFLOWS_DIR/01 - Image Generation/flux_dev.json" \
+        "flux1-dev.safetensors" "flux1-dev-fp8.safetensors"
+    # Official workflow expects t5xxl_fp16.safetensors — we have t5xxl_fp8_e4m3fn_scaled.safetensors
+    patch_model "$WORKFLOWS_DIR/01 - Image Generation/flux_dev.json" \
+        "t5xxl_fp16.safetensors" "t5xxl_fp8_e4m3fn_scaled.safetensors"
+
     dl "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_xl.json" \
         "$TEMPLATE_BASE/image_sd_xl.json"
+    # Official SDXL workflow uses a generic checkpoint name — patch to our filename
+    patch_model "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_xl.json" \
+        "sd_xl_base_1.0.safetensors" "juggernautXIII_ragnarok.safetensors"
+    patch_model "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_xl.json" \
+        "sd_xl_base.safetensors" "juggernautXIII_ragnarok.safetensors"
 
     # ── 02 Image Editing ─────────────────────────────────────
     echo "--- Image Editing ---"
     dl "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json" \
         "$TEMPLATE_BASE/image_flux_1_kontext_dev.json"
+    # Kontext uses fp8 scaled — patch to match our filename
+    patch_model "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json" \
+        "flux1-dev-kontext_fp8.safetensors" "flux1-dev-kontext_fp8_scaled.safetensors"
+    patch_model "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json" \
+        "t5xxl_fp16.safetensors" "t5xxl_fp8_e4m3fn_scaled.safetensors"
 
     # ── 03 Video Generation ──────────────────────────────────
     echo "--- Video Generation ---"
     dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.2_image_to_video.json" \
         "$TEMPLATE_BASE/video_wan2_2_14B_i2v.json"
+
     dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.2_text_to_video.json" \
         "$TEMPLATE_BASE/video_wan2_2_14B_t2v.json"
+
     dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.1_image_to_video.json" \
         "$TEMPLATE_BASE/video_wan2_1_14B_i2v.json"
 
@@ -394,6 +428,7 @@ setup_workflows() {
     echo "--- Talking Avatars ---"
     dl "$WORKFLOWS_DIR/04 - Talking Avatars/infinitetalk_single.json" \
         "$TEMPLATE_BASE/video_wan2_1_infinitetalk_i2v.json"
+
     dl "$WORKFLOWS_DIR/04 - Talking Avatars/multitalk.json" \
         "$TEMPLATE_BASE/video_wan2_1_multitalk.json"
 
@@ -401,6 +436,10 @@ setup_workflows() {
     echo "--- Audio ---"
     dl "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json" \
         "$TEMPLATE_BASE/audio_ace_step_1_5.json"
+    # ACE-Step model is in checkpoints/ not its own folder
+    patch_model "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json" \
+        "ace_step_v1_3.5b.safetensors" "ace_step_1.5_turbo_aio.safetensors"
+
     dl "$WORKFLOWS_DIR/05 - Audio/mmaudio_video_sound.json" \
         "$TEMPLATE_BASE/audio_mmaudio.json"
 
@@ -408,13 +447,20 @@ setup_workflows() {
     echo "--- Post Processing ---"
     dl "$WORKFLOWS_DIR/06 - Post Processing/upscale_image.json" \
         "$TEMPLATE_BASE/image_upscale.json"
+    patch_model "$WORKFLOWS_DIR/06 - Post Processing/upscale_image.json" \
+        "RealESRGAN_x4plus.pth" "RealESRGAN_x4plus.pth"
+    # ^ same name, no patch needed but shows the pattern for future changes
+
     dl "$WORKFLOWS_DIR/06 - Post Processing/face_restore_codeformer.json" \
         "$TEMPLATE_BASE/image_face_restore.json"
+
     dl "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json" \
         "$TEMPLATE_BASE/video_frame_interpolation.json"
+    patch_model "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json" \
+        "rife_v4.6.safetensors" "rife_v4.26.safetensors"
 
     echo "=========================================="
-    echo "ApexForge workflows ready!"
+    echo "ApexForge workflows ready and patched!"
     echo "  01 - Image Generation  (Z-Image Turbo, Z-Image Base, FLUX Dev, Juggernaut)"
     echo "  02 - Image Editing     (FLUX Kontext)"
     echo "  03 - Video Generation  (Wan2.2 I2V, Wan2.2 T2V, Wan2.1 I2V)"
