@@ -45,9 +45,9 @@ RUN pip install --no-cache-dir --upgrade pip
 # NOTE: Do NOT use --pre (nightly) — nightly breaks randomly and
 #       gives paying customers a bad experience.
 RUN pip install --no-cache-dir \
-    torch==2.11.0 \
-    torchvision \
-    torchaudio \
+    torch==2.10.0 \
+    torchvision==00.25.0 \
+    torchaudio==2.10.0 \
     --index-url https://download.pytorch.org/whl/cu128
 
 # ── JupyterLab ─────────────────────────────────────────────────
