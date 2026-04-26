@@ -56,15 +56,6 @@ RUN pip install --no-cache-dir \
     ipywidgets \
     jupyter-archive
 
-# ── SageAttention (built from source for sm_120) ───────────────
-# Requires nvcc from the devel base image above.
-# The TORCH_CUDA_ARCH_LIST env var above ensures sm_120 is compiled in.
-RUN git clone https://github.com/thu-ml/SageAttention.git /tmp/SageAttention && \
-    cd /tmp/SageAttention && \
-    pip install --no-cache-dir -e . --no-build-isolation && \
-    python -c "import sageattention; print('SageAttention OK:', sageattention.__version__)" && \
-    rm -rf /tmp/SageAttention/build
-
 # ── Startup script ─────────────────────────────────────────────
 COPY start_final.sh /app/start.sh
 RUN chmod +x /app/start.sh

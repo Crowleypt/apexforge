@@ -62,6 +62,18 @@ setup_comfyui() {
     fi
 }
 
+install_sageattention() {
+    if python -c "import sageattention" 2>/dev/null; then
+        echo "SageAttention already installed."
+        return
+    fi
+    echo "Installing SageAttention (requires GPU - first boot only)..."
+    git clone https://github.com/thu-ml/SageAttention.git /comfyui/SageAttention
+    cd /comfyui/SageAttention
+    pip install --no-cache-dir -e . --no-build-isolation
+    cd /
+    echo "SageAttention installed."
+}
 # Function to download Juggernaut XL model
 download_model() {
     echo "=========================================="
@@ -898,6 +910,7 @@ echo "=========================================="
 wait_for_network
 start_jupyter
 setup_comfyui
+install_sageattention
 install_custom_nodes
 setup_workflows
 download_model
