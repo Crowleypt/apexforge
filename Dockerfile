@@ -60,22 +60,22 @@ RUN pip install --no-cache-dir \
 COPY start_final.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
-# ── Workflow JSONs (baked into image, subfolders preserved) ────
-# Rename folders in repo to remove spaces, map to named targets via RUN
+# ── Workflow JSONs ─────────────────────────────────────────────
+# Copy flat into /workflows-src/ then rename into spaced folder names
 COPY workflows/ /workflows-src/
 RUN mkdir -p \
-        "/workflows/01 - Image Generation" \
-        "/workflows/02 - Image Editing" \
-        "/workflows/03 - Video Generation" \
-        "/workflows/04 - Talking Avatars" \
-        "/workflows/05 - Audio" \
-        "/workflows/06 - Post Processing" && \
-    cp /workflows-src/01-Image-Generation/*   "/workflows/01 - Image Generation/" && \
-    cp /workflows-src/02-Image-Editing/*       "/workflows/02 - Image Editing/" && \
-    cp /workflows-src/03-Video-Generation/*    "/workflows/03 - Video Generation/" && \
-    cp /workflows-src/04-Talking-Avatars/*     "/workflows/04 - Talking Avatars/" && \
-    cp /workflows-src/05-Audio/*               "/workflows/05 - Audio/" && \
-    cp /workflows-src/06-Post-Processing/*     "/workflows/06 - Post Processing/" && \
+        /workflows/01\ -\ Image\ Generation \
+        /workflows/02\ -\ Image\ Editing \
+        /workflows/03\ -\ Video\ Generation \
+        /workflows/04\ -\ Talking\ Avatars \
+        /workflows/05\ -\ Audio \
+        /workflows/06\ -\ Post\ Processing && \
+    cp /workflows-src/01-Image-Generation/*  /workflows/01\ -\ Image\ Generation/ && \
+    cp /workflows-src/02-Image-Editing/*     /workflows/02\ -\ Image\ Editing/ && \
+    cp /workflows-src/03-Video-Generation/*  /workflows/03\ -\ Video\ Generation/ && \
+    cp /workflows-src/04-Talking-Avatar/*    /workflows/04\ -\ Talking\ Avatars/ && \
+    cp /workflows-src/05-Audio/*             /workflows/05\ -\ Audio/ && \
+    cp /workflows-src/06-Post-Processing/*   /workflows/06\ -\ Post\ Processing/ && \
     rm -rf /workflows-src
 
 # ── Ports ──────────────────────────────────────────────────────
