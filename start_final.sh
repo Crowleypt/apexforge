@@ -341,12 +341,10 @@ setup_workflows() {
     echo "Setting up ApexForge curated workflows..."
     echo "=========================================="
 
-    # Workflows are baked into the Docker image at /workflows/
-    # (Add to Dockerfile: COPY workflows/ /workflows/)
-    WF_SRC="/workflows"
     WORKFLOWS_DIR="$COMFYUI_DIR/user/default/workflows"
+    REPO_TMP="/tmp/apexforge_repo"
 
-    # Create curated folder structure
+    # Create curated folder structure on network volume
     mkdir -p "$WORKFLOWS_DIR/01 - Image Generation"
     mkdir -p "$WORKFLOWS_DIR/02 - Image Editing"
     mkdir -p "$WORKFLOWS_DIR/03 - Video Generation"
@@ -354,101 +352,117 @@ setup_workflows() {
     mkdir -p "$WORKFLOWS_DIR/05 - Audio"
     mkdir -p "$WORKFLOWS_DIR/06 - Post Processing"
 
-    # Helper: copy workflow from image, skip if already exists
-    cpwf() {
-        local src="$1"
-        local dest="$2"
-        if [ ! -f "$dest" ]; then
-            if [ -f "$src" ]; then
-                cp "$src" "$dest"
-                echo "  ✓ $(basename $dest)"
+    # Clone the repo to get the latest workflows
+    # Uses --depth 1 for speed (no history needed) and --no-tags to minimize download
+    echo "Cloning ApexForge repo for workflows..."
+    rm -rf "$REPO_TMP"
+    if git clone --depth 1 --no-tags \
+        https://github.com/Crowleypt/apexforge.git "$REPO_TMP" 2>&1; then
+
+        WF_SRC="$REPO_TMP/workflows"
+
+        # Helper: copy only if destination doesn't exist yet
+        cpwf() {
+            local src="$1"
+            local dest="$2"
+            if [ ! -f "$dest" ]; then
+                if [ -f "$src" ]; then
+                    cp "$src" "$dest"
+                    echo "  ✓ $(basename $dest)"
+                else
+                    echo "  ✗ MISSING: $src"
+                fi
             else
-                echo "  ✗ MISSING SOURCE: $src"
+                echo "  ✓ $(basename $dest) already exists"
             fi
-        else
-            echo "  ✓ $(basename $dest) already exists"
-        fi
-    }
+        }
 
-    # ── 01 Image Generation ──────────────────────────────────
-    echo "--- Image Generation ---"
-    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_t2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i.json"
-    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_i2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_i2i.json"
-    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_t2i_lora.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i_lora.json"
-    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_t2i_controlnet.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i_controlnet.json"
-    cpwf "$WF_SRC/01 - Image Generation/flux_dev_t2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/flux_dev_t2i.json"
-    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_aio_t2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i.json"
-    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_fp8_t2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_fp8_t2i.json"
-    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_gguf_t2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_gguf_t2i.json"
-    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_aio_t2i_lora.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i_lora.json"
-    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_aio_t2i_controlnet.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i_controlnet.json"
-    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_t2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_t2i.json"
-    cpwf "$WF_SRC/01 - Image Generation/z_image_base_t2i.json" \
-         "$WORKFLOWS_DIR/01 - Image Generation/z_image_base_t2i.json"
+        # ── 01 Image Generation ──────────────────────────────────
+        echo "--- Image Generation ---"
+        cpwf "$WF_SRC/01-Image-Generation/juggernaut_reborn_t2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i.json"
+        cpwf "$WF_SRC/01-Image-Generation/juggernaut_reborn_i2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_i2i.json"
+        cpwf "$WF_SRC/01-Image-Generation/juggernaut_reborn_t2i_lora.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i_lora.json"
+        cpwf "$WF_SRC/01-Image-Generation/juggernaut_reborn_t2i_controlnet.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i_controlnet.json"
+        cpwf "$WF_SRC/01-Image-Generation/flux_dev_t2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/flux_dev_t2i.json"
+        cpwf "$WF_SRC/01-Image-Generation/z_image_turbo_aio_t2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i.json"
+        cpwf "$WF_SRC/01-Image-Generation/z_image_turbo_fp8_t2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_fp8_t2i.json"
+        cpwf "$WF_SRC/01-Image-Generation/z_image_turbo_gguf_t2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_gguf_t2i.json"
+        cpwf "$WF_SRC/01-Image-Generation/z_image_turbo_aio_t2i_lora.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i_lora.json"
+        cpwf "$WF_SRC/01-Image-Generation/z_image_turbo_aio_t2i_controlnet.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i_controlnet.json"
+        cpwf "$WF_SRC/01-Image-Generation/z_image_turbo_t2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_t2i.json"
+        cpwf "$WF_SRC/01-Image-Generation/z_image_base_t2i.json" \
+             "$WORKFLOWS_DIR/01 - Image Generation/z_image_base_t2i.json"
 
-    # ── 02 Image Editing ─────────────────────────────────────
-    echo "--- Image Editing ---"
-    cpwf "$WF_SRC/02 - Image Editing/flux_kontext_edit.json" \
-         "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json"
+        # ── 02 Image Editing ─────────────────────────────────────
+        echo "--- Image Editing ---"
+        cpwf "$WF_SRC/02-Image-Editing/flux_kontext_edit.json" \
+             "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json"
 
-    # ── 03 Video Generation ──────────────────────────────────
-    echo "--- Video Generation ---"
-    cpwf "$WF_SRC/03 - Video Generation/wan2_2_i2v.json" \
-         "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_i2v.json"
-    cpwf "$WF_SRC/03 - Video Generation/wan2_2_t2v.json" \
-         "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_t2v.json"
-    cpwf "$WF_SRC/03 - Video Generation/wan2_2_i2v_4step.json" \
-         "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_i2v_4step.json"
-    cpwf "$WF_SRC/03 - Video Generation/wan2_1_i2v.json" \
-         "$WORKFLOWS_DIR/03 - Video Generation/wan2_1_i2v.json"
+        # ── 03 Video Generation ──────────────────────────────────
+        echo "--- Video Generation ---"
+        cpwf "$WF_SRC/03-Video-Generation/wan2_2_i2v.json" \
+             "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_i2v.json"
+        cpwf "$WF_SRC/03-Video-Generation/wan2_2_t2v.json" \
+             "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_t2v.json"
+        cpwf "$WF_SRC/03-Video-Generation/wan2_2_i2v_4step.json" \
+             "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_i2v_4step.json"
+        cpwf "$WF_SRC/03-Video-Generation/wan2_1_i2v.json" \
+             "$WORKFLOWS_DIR/03 - Video Generation/wan2_1_i2v.json"
 
-    # ── 04 Talking Avatars ───────────────────────────────────
-    echo "--- Talking Avatars ---"
-    cpwf "$WF_SRC/04 - Talking Avatars/infinitetalk_single.json" \
-         "$WORKFLOWS_DIR/04 - Talking Avatars/infinitetalk_single.json"
-    cpwf "$WF_SRC/04 - Talking Avatars/multitalk.json" \
-         "$WORKFLOWS_DIR/04 - Talking Avatars/multitalk.json"
+        # ── 04 Talking Avatars ───────────────────────────────────
+        echo "--- Talking Avatars ---"
+        cpwf "$WF_SRC/04-Talking-Avatar/infinitetalk_single.json" \
+             "$WORKFLOWS_DIR/04 - Talking Avatars/infinitetalk_single.json"
+        cpwf "$WF_SRC/04-Talking-Avatar/multitalk.json" \
+             "$WORKFLOWS_DIR/04 - Talking Avatars/multitalk.json"
 
-    # ── 05 Audio ─────────────────────────────────────────────
-    echo "--- Audio ---"
-    cpwf "$WF_SRC/05 - Audio/ace_step_music_generation.json" \
-         "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json"
-    cpwf "$WF_SRC/05 - Audio/mmaudio_video_sound.json" \
-         "$WORKFLOWS_DIR/05 - Audio/mmaudio_video_sound.json"
+        # ── 05 Audio ─────────────────────────────────────────────
+        echo "--- Audio ---"
+        cpwf "$WF_SRC/05-Audio/ace_step_music_generation.json" \
+             "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json"
+        cpwf "$WF_SRC/05-Audio/mmaudio_video_sound.json" \
+             "$WORKFLOWS_DIR/05 - Audio/mmaudio_video_sound.json"
 
-    # ── 06 Post Processing ───────────────────────────────────
-    echo "--- Post Processing ---"
-    cpwf "$WF_SRC/06 - Post Processing/upscale_simple_no_model.json" \
-         "$WORKFLOWS_DIR/06 - Post Processing/upscale_simple_no_model.json"
-    cpwf "$WF_SRC/06 - Post Processing/upscale_with_model.json" \
-         "$WORKFLOWS_DIR/06 - Post Processing/upscale_with_model.json"
-    cpwf "$WF_SRC/06 - Post Processing/z_image_upscaler.json" \
-         "$WORKFLOWS_DIR/06 - Post Processing/z_image_upscaler.json"
-    cpwf "$WF_SRC/06 - Post Processing/face_restore_codeformer.json" \
-         "$WORKFLOWS_DIR/06 - Post Processing/face_restore_codeformer.json"
-    cpwf "$WF_SRC/06 - Post Processing/rife_frame_interpolation.json" \
-         "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json"
+        # ── 06 Post Processing ───────────────────────────────────
+        echo "--- Post Processing ---"
+        cpwf "$WF_SRC/06-Post-Processing/upscale_simple_no_model.json" \
+             "$WORKFLOWS_DIR/06 - Post Processing/upscale_simple_no_model.json"
+        cpwf "$WF_SRC/06-Post-Processing/upscale_with_model.json" \
+             "$WORKFLOWS_DIR/06 - Post Processing/upscale_with_model.json"
+        cpwf "$WF_SRC/06-Post-Processing/z_image_upscaler.json" \
+             "$WORKFLOWS_DIR/06 - Post Processing/z_image_upscaler.json"
+        cpwf "$WF_SRC/06-Post-Processing/face_restore_codeformer.json" \
+             "$WORKFLOWS_DIR/06 - Post Processing/face_restore_codeformer.json"
+        cpwf "$WF_SRC/06-Post-Processing/rife_frame_interpolation.json" \
+             "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json"
 
-    echo "=========================================="
-    echo "ApexForge workflows ready!"
-    echo "  01 - Image Generation  (Juggernaut Reborn T2I/I2I/LoRA/CN, Flux Dev, Z-Image Turbo AIO/FP8/GGUF/LoRA/CN, Z-Image Turbo Official, Z-Image Base)"
-    echo "  02 - Image Editing     (Flux Kontext)"
-    echo "  03 - Video Generation  (Wan2.2 I2V, Wan2.2 T2V, Wan2.2 I2V 4-step, Wan2.1 I2V)"
-    echo "  04 - Talking Avatars   (InfiniteTalk Single, MultiTalk)"
-    echo "  05 - Audio             (ACE-Step Music, MMAudio)"
-    echo "  06 - Post Processing   (Upscale Simple, Upscale ESRGAN, Z-Image Upscaler, Face Restore, RIFE)"
-    echo "=========================================="
+        # Clean up the temp clone
+        rm -rf "$REPO_TMP"
+
+        echo "=========================================="
+        echo "ApexForge workflows ready!"
+        echo "  01 - Image Generation  (Juggernaut Reborn T2I/I2I/LoRA/CN, Flux Dev, Z-Image Turbo AIO/FP8/GGUF/LoRA/CN, Z-Image Turbo Official, Z-Image Base)"
+        echo "  02 - Image Editing     (Flux Kontext)"
+        echo "  03 - Video Generation  (Wan2.2 I2V, Wan2.2 T2V, Wan2.2 I2V 4-step, Wan2.1 I2V)"
+        echo "  04 - Talking Avatars   (InfiniteTalk Single, MultiTalk)"
+        echo "  05 - Audio             (ACE-Step Music, MMAudio)"
+        echo "  06 - Post Processing   (Upscale Simple, Upscale ESRGAN, Z-Image Upscaler, Face Restore, RIFE)"
+        echo "=========================================="
+    else
+        echo "WARNING: Could not clone ApexForge repo — workflows not installed."
+        echo "Check network connectivity and try rebooting the pod."
+    fi
 }
 
 # Function to download audio generation + frame interpolation models
