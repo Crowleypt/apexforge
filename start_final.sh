@@ -1151,6 +1151,8 @@ download_workflow_models() {
     echo "=========================================="
 }
 
+# Function to update custom nodes
+update_custom_nodes() {
     cd "$COMFYUI_DIR/custom_nodes"
 
     echo "Checking for custom node updates..."
