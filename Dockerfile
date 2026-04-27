@@ -1,6 +1,6 @@
 # ApexForge Dockerfile
 # RTX 5090 / Blackwell (sm_120) compatible
-# PyTorch 2.11.0 stable + CUDA 12.8 + SageAttention
+# PyTorch 2.10.0 stable + CUDA 12.8 + SageAttention
 
 FROM nvidia/cuda:12.8.1-devel-ubuntu22.04
 
@@ -39,9 +39,9 @@ RUN update-alternatives --install /usr/bin/python  python  /usr/bin/python3.10 1
 
 RUN pip install --no-cache-dir --upgrade pip
 
-# ── PyTorch 2.11.0 stable with CUDA 12.8 (sm_120 native support) ──
+# ── PyTorch 2.10.0 stable with CUDA 12.8 (sm_120 native support) ──
 # 2.7.0 was the first stable release to support Blackwell.
-# 2.10.0 is the version installed below.
+# 2.10.0 is the current recommended stable as of April 2026.
 # NOTE: Do NOT use --pre (nightly) — nightly breaks randomly and
 #       gives paying customers a bad experience.
 RUN pip install --no-cache-dir \
@@ -58,9 +58,16 @@ RUN pip install --no-cache-dir \
 
 # ── Startup script ─────────────────────────────────────────────
 COPY start_final.sh /app/start.sh
-# ── Workflow JSONs (baked into image for zero-download boot) ───
-COPY workflows/ /workflows/
 RUN chmod +x /app/start.sh
+
+# ── Workflow JSONs (baked into image, subfolders preserved) ────
+# Each subfolder copied explicitly to preserve directory structure
+COPY "workflows/01 - Image Generation/" "/workflows/01 - Image Generation/"
+COPY "workflows/02 - Image Editing/"    "/workflows/02 - Image Editing/"
+COPY "workflows/03 - Video Generation/" "/workflows/03 - Video Generation/"
+COPY "workflows/04 - Talking Avatars/"  "/workflows/04 - Talking Avatars/"
+COPY "workflows/05 - Audio/"            "/workflows/05 - Audio/"
+COPY "workflows/06 - Post Processing/"  "/workflows/06 - Post Processing/"
 
 # ── Ports ──────────────────────────────────────────────────────
 # 8188 = ComfyUI
