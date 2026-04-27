@@ -41,12 +41,12 @@ RUN pip install --no-cache-dir --upgrade pip
 
 # ── PyTorch 2.11.0 stable with CUDA 12.8 (sm_120 native support) ──
 # 2.7.0 was the first stable release to support Blackwell.
-# 2.11.0 is the current recommended stable as of April 2026.
+# 2.10.0 is the version installed below.
 # NOTE: Do NOT use --pre (nightly) — nightly breaks randomly and
 #       gives paying customers a bad experience.
 RUN pip install --no-cache-dir \
     torch==2.10.0 \
-    torchvision==00.25.0 \
+    torchvision==0.25.0 \
     torchaudio==2.10.0 \
     --index-url https://download.pytorch.org/whl/cu128
 
@@ -58,6 +58,8 @@ RUN pip install --no-cache-dir \
 
 # ── Startup script ─────────────────────────────────────────────
 COPY start_final.sh /app/start.sh
+# ── Workflow JSONs (baked into image for zero-download boot) ───
+COPY workflows/ /workflows/
 RUN chmod +x /app/start.sh
 
 # ── Ports ──────────────────────────────────────────────────────

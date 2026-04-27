@@ -1,0 +1,575 @@
+{
+  "extra": {
+    "ds": {
+      "scale": 1,
+      "offset": [
+        -1416.9841519706852,
+        411.31345329500726
+      ]
+    }
+  },
+  "links": [
+    [
+      152,
+      85,
+      0,
+      92,
+      0,
+      "MMAUDIO_MODEL"
+    ],
+    [
+      161,
+      91,
+      0,
+      97,
+      0,
+      "IMAGE"
+    ],
+    [
+      163,
+      92,
+      0,
+      98,
+      0,
+      "AUDIO"
+    ],
+    [
+      166,
+      102,
+      0,
+      92,
+      1,
+      "MMAUDIO_FEATUREUTILS"
+    ],
+    [
+      170,
+      91,
+      0,
+      92,
+      2,
+      "IMAGE"
+    ],
+    [
+      171,
+      92,
+      0,
+      97,
+      1,
+      "AUDIO"
+    ],
+    [
+      172,
+      91,
+      3,
+      105,
+      0,
+      "VHS_VIDEOINFO"
+    ],
+    [
+      175,
+      105,
+      7,
+      92,
+      3,
+      "FLOAT"
+    ],
+    [
+      176,
+      105,
+      5,
+      97,
+      4,
+      "FLOAT"
+    ]
+  ],
+  "nodes": [
+    {
+      "id": 108,
+      "type": "MarkdownNote",
+      "pos": [
+        992.544189453125,
+        -150
+      ],
+      "size": [
+        540,
+        420
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "\u26a1 ApexForge \u2014 MMAudio \u2014 Video Sound Generation",
+      "properties": {},
+      "widgets_values": [
+        "# \u26a1 ApexForge \u2014 MMAudio \u2014 Video Sound Generation\n\n---\n\n## \ud83d\udfe3 MMAudioModelLoader\n**Model:** `mmaudio_large_44k_v2_fp16.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/mmaudio/`\n> Main audio generation model\n\n## \ud83d\udfe3 MMAudioFeatureUtilsLoader\n**Model:** `mmaudio_vae_44k_fp16.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/mmaudio/`\n> VAE \u2014 loaded by FeatureUtils node\n\n## \ud83d\udfe3 MMAudioFeatureUtilsLoader\n**Model:** `mmaudio_synchformer_fp16.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/mmaudio/`\n> Sync model \u2014 loaded by FeatureUtils node\n\n## \ud83d\udfe3 MMAudioFeatureUtilsLoader\n**Model:** `apple_DFN5B-CLIP-ViT-H-14-384_fp16.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/mmaudio/`\n> CLIP vision \u2014 loaded by FeatureUtils node\n\n---\n## \ud83e\udde9 Required Custom Nodes\n- ComfyUI-MMAudio (kijai)\n- ComfyUI-VideoHelperSuite\n\n---\n## \ud83d\udca1 Tips\n- Upload any video \u2014 MMAudio generates synced audio from the visual content\n- Prompt describes the sound: 'man running', 'ocean waves', 'crowd cheering'\n- Duration is auto-detected from the loaded video via VHS_VideoInfo\n- Output is saved as MP4 with embedded audio \u2014 ready to use\n- Pair with InfiniteTalk/Wan outputs for fully voiced talking avatar videos\n\n---\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+      ],
+      "color": "#231535",
+      "bgcolor": "#3f2460"
+    },
+    {
+      "id": 105,
+      "pos": [
+        2073.21435546875,
+        238.4519500732422
+      ],
+      "mode": 0,
+      "size": [
+        262,
+        206
+      ],
+      "type": "VHS_VideoInfo",
+      "flags": {},
+      "order": 4,
+      "inputs": [
+        {
+          "link": 172,
+          "name": "video_info",
+          "type": "VHS_VIDEOINFO"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "source_fps\ud83d\udfe8",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "source_frame_count\ud83d\udfe8",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "source_duration\ud83d\udfe8",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "source_width\ud83d\udfe8",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "source_height\ud83d\udfe8",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "loaded_fps\ud83d\udfe6",
+          "type": "FLOAT",
+          "links": [
+            176
+          ],
+          "slot_index": 5
+        },
+        {
+          "name": "loaded_frame_count\ud83d\udfe6",
+          "type": "INT",
+          "links": null,
+          "slot_index": 6
+        },
+        {
+          "name": "loaded_duration\ud83d\udfe6",
+          "type": "FLOAT",
+          "links": [
+            175
+          ],
+          "slot_index": 7
+        },
+        {
+          "name": "loaded_width\ud83d\udfe6",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "loaded_height\ud83d\udfe6",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoInfo"
+      },
+      "showAdvanced": null,
+      "widgets_values": {}
+    },
+    {
+      "id": 107,
+      "pos": [
+        1625.8448486328125,
+        -494.55413818359375
+      ],
+      "mode": 0,
+      "size": [
+        270.0444641113281,
+        58
+      ],
+      "type": "Note",
+      "color": "#223",
+      "flags": {},
+      "order": 0,
+      "title": "Original Repo",
+      "inputs": [],
+      "bgcolor": "#335",
+      "outputs": [],
+      "properties": {},
+      "showAdvanced": null,
+      "widgets_values": [
+        "https://github.com/kijai/ComfyUI-MMAudio"
+      ]
+    },
+    {
+      "id": 102,
+      "pos": [
+        1572.544189453125,
+        -68.1871337890625
+      ],
+      "mode": 0,
+      "size": [
+        487.2332763671875,
+        154
+      ],
+      "type": "MMAudioFeatureUtilsLoader",
+      "flags": {},
+      "order": 1,
+      "inputs": [
+        {
+          "link": null,
+          "name": "bigvgan_vocoder_model",
+          "type": "VOCODER_MODEL",
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "mmaudio_featureutils",
+          "type": "MMAUDIO_FEATUREUTILS",
+          "links": [
+            166
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MMAudioFeatureUtilsLoader"
+      },
+      "showAdvanced": null,
+      "widgets_values": [
+        "mmaudio_vae_44k_fp16.safetensors",
+        "mmaudio_synchformer_fp16.safetensors",
+        "apple_DFN5B-CLIP-ViT-H-14-384_fp16.safetensors",
+        "44k",
+        "fp16"
+      ]
+    },
+    {
+      "id": 85,
+      "pos": [
+        1575.6591796875,
+        -223.62059020996094
+      ],
+      "mode": 0,
+      "size": [
+        438.219970703125,
+        83.87998962402344
+      ],
+      "type": "MMAudioModelLoader",
+      "flags": {},
+      "order": 2,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "mmaudio_model",
+          "type": "MMAUDIO_MODEL",
+          "links": [
+            152
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MMAudioModelLoader"
+      },
+      "showAdvanced": null,
+      "widgets_values": [
+        "mmaudio_large_44k_v2_fp16.safetensors",
+        "fp16"
+      ]
+    },
+    {
+      "id": 98,
+      "pos": [
+        2911.162353515625,
+        -223.48348999023438
+      ],
+      "mode": 0,
+      "size": [
+        654.5530395507812,
+        76
+      ],
+      "type": "PreviewAudio",
+      "flags": {},
+      "order": 6,
+      "inputs": [
+        {
+          "link": 163,
+          "name": "audio",
+          "type": "AUDIO"
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewAudio"
+      },
+      "showAdvanced": null,
+      "widgets_values": [
+        null
+      ]
+    },
+    {
+      "id": 91,
+      "pos": [
+        1575.9405517578125,
+        172.03079223632812
+      ],
+      "mode": 0,
+      "size": [
+        417.6617736816406,
+        262
+      ],
+      "type": "VHS_LoadVideo",
+      "flags": {},
+      "order": 3,
+      "inputs": [
+        {
+          "link": null,
+          "name": "meta_batch",
+          "type": "VHS_BatchManager",
+          "shape": 7
+        },
+        {
+          "link": null,
+          "name": "vae",
+          "type": "VAE",
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            161,
+            170
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": null
+        },
+        {
+          "name": "video_info",
+          "type": "VHS_VIDEOINFO",
+          "links": [
+            172
+          ],
+          "slot_index": 3
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_LoadVideo"
+      },
+      "showAdvanced": null,
+      "widgets_values": {
+        "video": "Runcomfy_example_1180.mp4",
+        "force_rate": 0,
+        "force_size": "?x512",
+        "custom_width": 512,
+        "videopreview": {
+          "muted": false,
+          "hidden": false,
+          "params": {
+            "type": "input",
+            "format": "video/mp4",
+            "filename": "Runcomfy_example_1180.mp4",
+            "force_rate": 0,
+            "frame_load_cap": 0,
+            "select_every_nth": 1,
+            "skip_first_frames": 0
+          },
+          "paused": false
+        },
+        "custom_height": 512,
+        "frame_load_cap": 0,
+        "select_every_nth": 1,
+        "skip_first_frames": 0,
+        "choose video to upload": "image"
+      }
+    },
+    {
+      "id": 97,
+      "pos": [
+        2915.34765625,
+        -99.48217010498047
+      ],
+      "mode": 0,
+      "size": [
+        648.7454223632812,
+        354
+      ],
+      "type": "VHS_VideoCombine",
+      "flags": {},
+      "order": 7,
+      "inputs": [
+        {
+          "link": 161,
+          "name": "images",
+          "type": "IMAGE"
+        },
+        {
+          "link": 171,
+          "name": "audio",
+          "type": "AUDIO",
+          "shape": 7
+        },
+        {
+          "link": null,
+          "name": "meta_batch",
+          "type": "VHS_BatchManager",
+          "shape": 7
+        },
+        {
+          "link": null,
+          "name": "vae",
+          "type": "VAE",
+          "shape": 7
+        },
+        {
+          "link": 176,
+          "name": "frame_rate",
+          "type": "FLOAT",
+          "widget": {
+            "name": "frame_rate"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "showAdvanced": null,
+      "widgets_values": {
+        "crf": 19,
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "pingpong": false,
+        "frame_rate": 24,
+        "loop_count": 0,
+        "save_output": true,
+        "videopreview": {
+          "muted": false,
+          "hidden": false,
+          "params": {
+            "type": "output",
+            "format": "video/h264-mp4",
+            "filename": "Output_00001-audio.mp4",
+            "fullpath": "/workspace/ComfyUI/output/Output_00001-audio.mp4",
+            "workflow": "Output_00001.png",
+            "subfolder": "",
+            "frame_rate": 25
+          },
+          "paused": false
+        },
+        "save_metadata": true,
+        "trim_to_audio": false,
+        "filename_prefix": "Output"
+      }
+    },
+    {
+      "id": 92,
+      "pos": [
+        2322.641845703125,
+        -222.64015197753906
+      ],
+      "mode": 0,
+      "size": [
+        411.29339599609375,
+        354
+      ],
+      "type": "MMAudioSampler",
+      "flags": {},
+      "order": 5,
+      "inputs": [
+        {
+          "link": 152,
+          "name": "mmaudio_model",
+          "type": "MMAUDIO_MODEL"
+        },
+        {
+          "link": 166,
+          "name": "feature_utils",
+          "type": "MMAUDIO_FEATUREUTILS"
+        },
+        {
+          "link": 170,
+          "name": "images",
+          "type": "IMAGE",
+          "shape": 7
+        },
+        {
+          "link": 175,
+          "name": "duration",
+          "type": "FLOAT",
+          "widget": {
+            "name": "duration"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            163,
+            171
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "MMAudioSampler"
+      },
+      "showAdvanced": null,
+      "widgets_values": [
+        3,
+        30,
+        4.5,
+        481413390453132,
+        "randomize",
+        "man running",
+        "",
+        false,
+        true
+      ]
+    }
+  ],
+  "config": {},
+  "groups": [],
+  "version": 0.4,
+  "last_link_id": 176,
+  "last_node_id": 109
+}

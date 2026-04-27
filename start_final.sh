@@ -62,24 +62,25 @@ setup_comfyui() {
     fi
 }
 
-# Function to download Juggernaut XL model
+# Function to download Juggernaut Reborn model (SD 1.5)
 download_model() {
     echo "=========================================="
-    echo "Checking for Juggernaut XIII model..."
+    echo "Checking for Juggernaut Reborn model..."
     echo "=========================================="
-    mkdir -p "$CHECKPOINTS_DIR"
 
-    MODEL_PATH="$CHECKPOINTS_DIR/juggernautXIII_ragnarok.safetensors"
+    # Reborn is SD 1.5 — lives in checkpoints/sd15/
+    mkdir -p "$CHECKPOINTS_DIR/sd15"
+
+    MODEL_PATH="$CHECKPOINTS_DIR/sd15/juggernaut_reborn.safetensors"
     if [ ! -f "$MODEL_PATH" ]; then
-        echo "Downloading Juggernaut XIII: Ragnarok model (6.62 GB)..."
-        JUGG_URL="https://civitai.com/api/download/models/1759168?type=Model&format=SafeTensor&size=full&fp=fp16"
-        [ -n "$CIVITAI_TOKEN" ] && JUGG_URL="${JUGG_URL}&token=${CIVITAI_TOKEN}"
-        curl -L -o "$MODEL_PATH" "$JUGG_URL"
-        
+        echo "Downloading Juggernaut Reborn model (~2 GB) from HuggingFace..."
+        wget --progress=bar:force:noscroll -O "$MODEL_PATH" \
+            "https://huggingface.co/HyperX-Sentience/Juggernaut-Reborn/resolve/main/juggernaut_reborn.safetensors?download=true"
+
         if [ -f "$MODEL_PATH" ]; then
             FILE_SIZE=$(stat -c%s "$MODEL_PATH" 2>/dev/null || echo 0)
             if [ "$FILE_SIZE" -lt 1000000 ]; then
-                echo "ERROR: Juggernaut download too small — likely needs CIVITAI_TOKEN env var. Removing..."
+                echo "ERROR: Juggernaut Reborn download too small — removing..."
                 rm -f "$MODEL_PATH"
             else
                 echo "Download complete! File size: $FILE_SIZE bytes"
@@ -88,7 +89,7 @@ download_model() {
             echo "ERROR: Download failed."
         fi
     else
-        echo "Juggernaut XIII model already exists."
+        echo "Juggernaut Reborn model already exists."
     fi
 }
 
@@ -334,16 +335,15 @@ download_utility_models() {
     echo "=========================================="
 }
 
-# Function to download pre-built workflows into the user workflows folder
+# Function to copy pre-built ApexForge workflows from Docker image into network volume
 setup_workflows() {
     echo "=========================================="
     echo "Setting up ApexForge curated workflows..."
     echo "=========================================="
 
-    # Base URL for official Comfy-Org workflow templates
-    TEMPLATE_BASE="https://raw.githubusercontent.com/Comfy-Org/workflow_templates/main/templates"
-
-    # Root workflows dir
+    # Workflows are baked into the Docker image at /workflows/
+    # (Add to Dockerfile: COPY workflows/ /workflows/)
+    WF_SRC="/workflows"
     WORKFLOWS_DIR="$COMFYUI_DIR/user/default/workflows"
 
     # Create curated folder structure
@@ -354,119 +354,100 @@ setup_workflows() {
     mkdir -p "$WORKFLOWS_DIR/05 - Audio"
     mkdir -p "$WORKFLOWS_DIR/06 - Post Processing"
 
-    # Helper: download only if file doesn't exist yet
-    dl() {
-        local dest="$1"
-        local url="$2"
+    # Helper: copy workflow from image, skip if already exists
+    cpwf() {
+        local src="$1"
+        local dest="$2"
         if [ ! -f "$dest" ]; then
-            wget -q -O "$dest" "$url" && echo "  ✓ $(basename $dest)" || echo "  ✗ FAILED: $(basename $dest)"
+            if [ -f "$src" ]; then
+                cp "$src" "$dest"
+                echo "  ✓ $(basename $dest)"
+            else
+                echo "  ✗ MISSING SOURCE: $src"
+            fi
         else
             echo "  ✓ $(basename $dest) already exists"
         fi
     }
 
-    # Helper: patch model filename in workflow JSON
-    # Usage: patch_model "workflow.json" "old_name.safetensors" "new_name.safetensors"
-    patch_model() {
-        local file="$1"
-        local old="$2"
-        local new="$3"
-        if [ -f "$file" ]; then
-            sed -i "s|${old}|${new}|g" "$file"
-        fi
-    }
-
     # ── 01 Image Generation ──────────────────────────────────
     echo "--- Image Generation ---"
-    dl "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo.json" \
-        "$TEMPLATE_BASE/image_z_image_turbo.json"
-    # z_image_turbo uses correct filenames — no patch needed
-
-    dl "$WORKFLOWS_DIR/01 - Image Generation/z_image_base.json" \
-        "$TEMPLATE_BASE/image_z_image.json"
-    # z_image_base uses correct filenames — no patch needed
-
-    dl "$WORKFLOWS_DIR/01 - Image Generation/flux_dev.json" \
-        "$TEMPLATE_BASE/image_flux_1_dev.json"
-    # Official workflow expects flux1-dev.safetensors — we have flux1-dev-fp8.safetensors
-    patch_model "$WORKFLOWS_DIR/01 - Image Generation/flux_dev.json" \
-        "flux1-dev.safetensors" "flux1-dev-fp8.safetensors"
-    # Official workflow expects t5xxl_fp16.safetensors — we have t5xxl_fp8_e4m3fn_scaled.safetensors
-    patch_model "$WORKFLOWS_DIR/01 - Image Generation/flux_dev.json" \
-        "t5xxl_fp16.safetensors" "t5xxl_fp8_e4m3fn_scaled.safetensors"
-
-    dl "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_xl.json" \
-        "$TEMPLATE_BASE/image_sd_xl.json"
-    # Official SDXL workflow uses a generic checkpoint name — patch to our filename
-    patch_model "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_xl.json" \
-        "sd_xl_base_1.0.safetensors" "juggernautXIII_ragnarok.safetensors"
-    patch_model "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_xl.json" \
-        "sd_xl_base.safetensors" "juggernautXIII_ragnarok.safetensors"
+    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_t2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i.json"
+    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_i2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_i2i.json"
+    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_t2i_lora.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i_lora.json"
+    cpwf "$WF_SRC/01 - Image Generation/juggernaut_reborn_t2i_controlnet.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/juggernaut_reborn_t2i_controlnet.json"
+    cpwf "$WF_SRC/01 - Image Generation/flux_dev_t2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/flux_dev_t2i.json"
+    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_aio_t2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i.json"
+    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_fp8_t2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_fp8_t2i.json"
+    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_gguf_t2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_gguf_t2i.json"
+    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_aio_t2i_lora.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i_lora.json"
+    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_aio_t2i_controlnet.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_aio_t2i_controlnet.json"
+    cpwf "$WF_SRC/01 - Image Generation/z_image_turbo_t2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/z_image_turbo_t2i.json"
+    cpwf "$WF_SRC/01 - Image Generation/z_image_base_t2i.json" \
+         "$WORKFLOWS_DIR/01 - Image Generation/z_image_base_t2i.json"
 
     # ── 02 Image Editing ─────────────────────────────────────
     echo "--- Image Editing ---"
-    dl "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json" \
-        "$TEMPLATE_BASE/image_flux_1_kontext_dev.json"
-    # Kontext uses fp8 scaled — patch to match our filename
-    patch_model "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json" \
-        "flux1-dev-kontext_fp8.safetensors" "flux1-dev-kontext_fp8_scaled.safetensors"
-    patch_model "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json" \
-        "t5xxl_fp16.safetensors" "t5xxl_fp8_e4m3fn_scaled.safetensors"
+    cpwf "$WF_SRC/02 - Image Editing/flux_kontext_edit.json" \
+         "$WORKFLOWS_DIR/02 - Image Editing/flux_kontext_edit.json"
 
     # ── 03 Video Generation ──────────────────────────────────
     echo "--- Video Generation ---"
-    dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.2_image_to_video.json" \
-        "$TEMPLATE_BASE/video_wan2_2_14B_i2v.json"
-
-    dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.2_text_to_video.json" \
-        "$TEMPLATE_BASE/video_wan2_2_14B_t2v.json"
-
-    dl "$WORKFLOWS_DIR/03 - Video Generation/wan2.1_image_to_video.json" \
-        "$TEMPLATE_BASE/video_wan2_1_14B_i2v.json"
+    cpwf "$WF_SRC/03 - Video Generation/wan2_2_i2v.json" \
+         "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_i2v.json"
+    cpwf "$WF_SRC/03 - Video Generation/wan2_2_t2v.json" \
+         "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_t2v.json"
+    cpwf "$WF_SRC/03 - Video Generation/wan2_2_i2v_4step.json" \
+         "$WORKFLOWS_DIR/03 - Video Generation/wan2_2_i2v_4step.json"
+    cpwf "$WF_SRC/03 - Video Generation/wan2_1_i2v.json" \
+         "$WORKFLOWS_DIR/03 - Video Generation/wan2_1_i2v.json"
 
     # ── 04 Talking Avatars ───────────────────────────────────
     echo "--- Talking Avatars ---"
-    dl "$WORKFLOWS_DIR/04 - Talking Avatars/infinitetalk_single.json" \
-        "$TEMPLATE_BASE/video_wan2_1_infinitetalk_i2v.json"
-
-    dl "$WORKFLOWS_DIR/04 - Talking Avatars/multitalk.json" \
-        "$TEMPLATE_BASE/video_wan2_1_multitalk.json"
+    cpwf "$WF_SRC/04 - Talking Avatars/infinitetalk_single.json" \
+         "$WORKFLOWS_DIR/04 - Talking Avatars/infinitetalk_single.json"
+    cpwf "$WF_SRC/04 - Talking Avatars/multitalk.json" \
+         "$WORKFLOWS_DIR/04 - Talking Avatars/multitalk.json"
 
     # ── 05 Audio ─────────────────────────────────────────────
     echo "--- Audio ---"
-    dl "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json" \
-        "$TEMPLATE_BASE/audio_ace_step_1_5.json"
-    # ACE-Step model is in checkpoints/ not its own folder
-    patch_model "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json" \
-        "ace_step_v1_3.5b.safetensors" "ace_step_1.5_turbo_aio.safetensors"
-
-    dl "$WORKFLOWS_DIR/05 - Audio/mmaudio_video_sound.json" \
-        "$TEMPLATE_BASE/audio_mmaudio.json"
+    cpwf "$WF_SRC/05 - Audio/ace_step_music_generation.json" \
+         "$WORKFLOWS_DIR/05 - Audio/ace_step_music_generation.json"
+    cpwf "$WF_SRC/05 - Audio/mmaudio_video_sound.json" \
+         "$WORKFLOWS_DIR/05 - Audio/mmaudio_video_sound.json"
 
     # ── 06 Post Processing ───────────────────────────────────
     echo "--- Post Processing ---"
-    dl "$WORKFLOWS_DIR/06 - Post Processing/upscale_image.json" \
-        "$TEMPLATE_BASE/image_upscale.json"
-    patch_model "$WORKFLOWS_DIR/06 - Post Processing/upscale_image.json" \
-        "RealESRGAN_x4plus.pth" "RealESRGAN_x4plus.pth"
-    # ^ same name, no patch needed but shows the pattern for future changes
-
-    dl "$WORKFLOWS_DIR/06 - Post Processing/face_restore_codeformer.json" \
-        "$TEMPLATE_BASE/image_face_restore.json"
-
-    dl "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json" \
-        "$TEMPLATE_BASE/video_frame_interpolation.json"
-    patch_model "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json" \
-        "rife_v4.6.safetensors" "rife_v4.26.safetensors"
+    cpwf "$WF_SRC/06 - Post Processing/upscale_simple_no_model.json" \
+         "$WORKFLOWS_DIR/06 - Post Processing/upscale_simple_no_model.json"
+    cpwf "$WF_SRC/06 - Post Processing/upscale_with_model.json" \
+         "$WORKFLOWS_DIR/06 - Post Processing/upscale_with_model.json"
+    cpwf "$WF_SRC/06 - Post Processing/z_image_upscaler.json" \
+         "$WORKFLOWS_DIR/06 - Post Processing/z_image_upscaler.json"
+    cpwf "$WF_SRC/06 - Post Processing/face_restore_codeformer.json" \
+         "$WORKFLOWS_DIR/06 - Post Processing/face_restore_codeformer.json"
+    cpwf "$WF_SRC/06 - Post Processing/rife_frame_interpolation.json" \
+         "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json"
 
     echo "=========================================="
-    echo "ApexForge workflows ready and patched!"
-    echo "  01 - Image Generation  (Z-Image Turbo, Z-Image Base, FLUX Dev, Juggernaut)"
-    echo "  02 - Image Editing     (FLUX Kontext)"
-    echo "  03 - Video Generation  (Wan2.2 I2V, Wan2.2 T2V, Wan2.1 I2V)"
-    echo "  04 - Talking Avatars   (InfiniteTalk, MultiTalk)"
+    echo "ApexForge workflows ready!"
+    echo "  01 - Image Generation  (Juggernaut Reborn T2I/I2I/LoRA/CN, Flux Dev, Z-Image Turbo AIO/FP8/GGUF/LoRA/CN, Z-Image Turbo Official, Z-Image Base)"
+    echo "  02 - Image Editing     (Flux Kontext)"
+    echo "  03 - Video Generation  (Wan2.2 I2V, Wan2.2 T2V, Wan2.2 I2V 4-step, Wan2.1 I2V)"
+    echo "  04 - Talking Avatars   (InfiniteTalk Single, MultiTalk)"
     echo "  05 - Audio             (ACE-Step Music, MMAudio)"
-    echo "  06 - Post Processing   (Upscale, Face Restore, RIFE)"
+    echo "  06 - Post Processing   (Upscale Simple, Upscale ESRGAN, Z-Image Upscaler, Face Restore, RIFE)"
     echo "=========================================="
 }
 
@@ -484,13 +465,23 @@ download_audio_and_video_utils() {
     # ACE-STEP 1.5 TURBO AIO - Music generation from text/lyrics
     # Under 0.5s per song on 5090. Commercial-safe training data.
     # -------------------------------------------------------
-    ACE_STEP="$COMFYUI_DIR/models/checkpoints/ace_step_1.5_turbo_aio.safetensors"
-    if [ ! -f "$ACE_STEP" ]; then
-        echo "Downloading ACE-Step 1.5 Turbo music generation model (~7.7 GB)..."
-        wget --progress=bar:force:noscroll -O "$ACE_STEP" \
+    ACE_STEP_15="$COMFYUI_DIR/models/checkpoints/ace_step_1.5_turbo_aio.safetensors"
+    if [ ! -f "$ACE_STEP_15" ]; then
+        echo "Downloading ACE-Step 1.5 Turbo AIO music generation model (~7.7 GB)..."
+        wget --progress=bar:force:noscroll -O "$ACE_STEP_15" \
             "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/checkpoints/ace_step_1.5_turbo_aio.safetensors?download=true"
     else
-        echo "ACE-Step 1.5 already exists."
+        echo "ACE-Step 1.5 Turbo already exists."
+    fi
+
+    # ACE-Step v1 3.5B — used by the uploaded ace_step_music_generation.json workflow
+    ACE_STEP_V1="$COMFYUI_DIR/models/checkpoints/ace_step_v1_3.5b.safetensors"
+    if [ ! -f "$ACE_STEP_V1" ]; then
+        echo "Downloading ACE-Step v1 3.5B music generation model (~7 GB)..."
+        wget --progress=bar:force:noscroll -O "$ACE_STEP_V1" \
+            "https://huggingface.co/ACE-Step/ACE-Step/resolve/main/ace_step_v1_3.5b.safetensors?download=true"
+    else
+        echo "ACE-Step v1 3.5B already exists."
     fi
 
     # -------------------------------------------------------
@@ -877,6 +868,51 @@ install_custom_nodes() {
         cd ..
     fi
 
+    # Install ComfyUI-GGUF (required for GGUF model loading — InfiniteTalk + Z-Image GGUF workflows)
+    if [ ! -d "ComfyUI-GGUF" ]; then
+        echo "Installing ComfyUI-GGUF..."
+        git clone https://github.com/city96/ComfyUI-GGUF.git
+        cd ComfyUI-GGUF
+        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
+        cd ..
+    fi
+
+    # Install rgthree-comfy (required for Z-Image ControlNet + InfiniteTalk workflows)
+    if [ ! -d "rgthree-comfy" ]; then
+        echo "Installing rgthree-comfy..."
+        git clone https://github.com/rgthree/rgthree-comfy.git
+        cd rgthree-comfy
+        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
+        cd ..
+    fi
+
+    # Install ComfyUI-VideoHelperSuite (required for InfiniteTalk/MultiTalk video handling)
+    if [ ! -d "ComfyUI-VideoHelperSuite" ]; then
+        echo "Installing ComfyUI-VideoHelperSuite..."
+        git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
+        cd ComfyUI-VideoHelperSuite
+        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
+        cd ..
+    fi
+
+    # Install comfyui_controlnet_aux (required for ControlNet preprocessing — Juggernaut + Z-Image ControlNet workflows)
+    if [ ! -d "comfyui_controlnet_aux" ]; then
+        echo "Installing comfyui_controlnet_aux..."
+        git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git
+        cd comfyui_controlnet_aux
+        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
+        cd ..
+    fi
+
+    # Install ComfyUI-facerestore-cf (required for codeformer face restoration workflow)
+    if [ ! -d "facerestore_cf" ]; then
+        echo "Installing facerestore_cf..."
+        git clone https://github.com/mav-rik/facerestore_cf.git
+        cd facerestore_cf
+        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
+        cd ..
+    fi
+
     # Install ComfyUI-WanVideoWrapper (required for InfiniteTalk + MultiTalk)
     if [ ! -d "ComfyUI-WanVideoWrapper" ]; then
         echo "Installing ComfyUI-WanVideoWrapper (Kijai)..."
@@ -900,8 +936,221 @@ install_custom_nodes() {
     fi
 }
 
-# Function to update custom nodes
-update_custom_nodes() {
+# Function to download models required by uploaded custom workflows
+# These were identified as missing from the original startup script
+download_workflow_models() {
+    echo "=========================================="
+    echo "Checking for workflow-required models..."
+    echo "=========================================="
+
+    # -------------------------------------------------------
+    # Z-IMAGE AIO CHECKPOINT (used by 5a + 6 + 7 workflows)
+    # All-in-one: includes VAE + text encoder baked in
+    # -------------------------------------------------------
+    mkdir -p "$CHECKPOINTS_DIR/z-image"
+    ZIMAGE_AIO="$CHECKPOINTS_DIR/z-image/z-image-turbo-fp8-aio.safetensors"
+    if [ ! -f "$ZIMAGE_AIO" ]; then
+        echo "Downloading Z-Image Turbo FP8 AIO checkpoint (~10 GB)..."
+        wget --progress=bar:force:noscroll -O "$ZIMAGE_AIO" \
+            "https://huggingface.co/SeeSee21/Z-Image-Turbo-AIO/resolve/main/z-image-turbo-fp8-aio.safetensors?download=true"
+    else
+        echo "Z-Image Turbo AIO checkpoint already exists."
+    fi
+
+    # -------------------------------------------------------
+    # Z-IMAGE SPLIT FILES (used by 5b workflow — Kijai fp8 variant)
+    # -------------------------------------------------------
+    mkdir -p "$DIFFUSION_MODELS_DIR/z-image"
+    ZIMAGE_KJ="$DIFFUSION_MODELS_DIR/z-image/z-image-turbo_fp8_scaled_e5m2_KJ.safetensors"
+    if [ ! -f "$ZIMAGE_KJ" ]; then
+        echo "Downloading Z-Image Turbo fp8 scaled (Kijai variant, ~6 GB)..."
+        wget --progress=bar:force:noscroll -O "$ZIMAGE_KJ" \
+            "https://huggingface.co/Kijai/Z-Image_comfy_fp8_scaled/resolve/main/z-image-turbo_fp8_scaled_e5m2_KJ.safetensors?download=true"
+    else
+        echo "Z-Image Turbo fp8 KJ already exists."
+    fi
+
+    # Qwen3 fp8 mixed text encoder (used by 5b workflow)
+    QWEN_FP8="$COMFYUI_DIR/models/text_encoders/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors"
+    if [ ! -f "$QWEN_FP8" ]; then
+        echo "Downloading Qwen3-4B fp8 mixed text encoder..."
+        wget --progress=bar:force:noscroll -O "$QWEN_FP8" \
+            "https://huggingface.co/silveroxides/Qwen3-4B-ComfyQuants-SingleFiles/resolve/main/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors?download=true"
+    else
+        echo "Qwen3-4B fp8 mixed already exists."
+    fi
+
+    # -------------------------------------------------------
+    # Z-IMAGE GGUF (used by 5c workflow)
+    # -------------------------------------------------------
+    ZIMAGE_GGUF="$DIFFUSION_MODELS_DIR/z-image/z-image-turbo-q4_k_s.gguf"
+    if [ ! -f "$ZIMAGE_GGUF" ]; then
+        echo "Downloading Z-Image Turbo Q4_K_S GGUF (~5 GB)..."
+        wget --progress=bar:force:noscroll -O "$ZIMAGE_GGUF" \
+            "https://huggingface.co/gguf-org/z-image-gguf/resolve/main/z-image-turbo-q4_k_s.gguf?download=true"
+    else
+        echo "Z-Image Turbo GGUF already exists."
+    fi
+
+    # Qwen GGUF text encoder (used by 5c workflow)
+    QWEN_GGUF="$COMFYUI_DIR/models/text_encoders/qwen-4b-zimage-heretic-q8.gguf"
+    if [ ! -f "$QWEN_GGUF" ]; then
+        echo "Downloading Qwen GGUF text encoder (heretic q8)..."
+        wget --progress=bar:force:noscroll -O "$QWEN_GGUF" \
+            "https://huggingface.co/Lockout/qwen3-4b-heretic-zimage/resolve/main/qwen-4b-zimage-heretic-q8.gguf?download=true"
+    else
+        echo "Qwen GGUF text encoder already exists."
+    fi
+
+    # -------------------------------------------------------
+    # CONTROLNET SD1.5 MODELS (used by Juggernaut ControlNet workflow)
+    # -------------------------------------------------------
+    mkdir -p "$COMFYUI_DIR/models/controlnet/sd15"
+    CANNY_CN="$COMFYUI_DIR/models/controlnet/sd15/control_v11p_sd15_canny_fp16.safetensors"
+    if [ ! -f "$CANNY_CN" ]; then
+        echo "Downloading ControlNet SD1.5 Canny fp16..."
+        wget --progress=bar:force:noscroll -O "$CANNY_CN" \
+            "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_canny_fp16.safetensors?download=true"
+    else
+        echo "ControlNet Canny SD1.5 already exists."
+    fi
+
+    DEPTH_CN="$COMFYUI_DIR/models/controlnet/sd15/control_v11f1p_sd15_depth_fp16.safetensors"
+    if [ ! -f "$DEPTH_CN" ]; then
+        echo "Downloading ControlNet SD1.5 Depth fp16..."
+        wget --progress=bar:force:noscroll -O "$DEPTH_CN" \
+            "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11f1p_sd15_depth_fp16.safetensors?download=true"
+    else
+        echo "ControlNet Depth SD1.5 already exists."
+    fi
+
+    POSE_CN="$COMFYUI_DIR/models/controlnet/sd15/control_v11p_sd15_openpose_fp16.safetensors"
+    if [ ! -f "$POSE_CN" ]; then
+        echo "Downloading ControlNet SD1.5 OpenPose fp16..."
+        wget --progress=bar:force:noscroll -O "$POSE_CN" \
+            "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_openpose_fp16.safetensors?download=true"
+    else
+        echo "ControlNet OpenPose SD1.5 already exists."
+    fi
+
+    # -------------------------------------------------------
+    # Z-IMAGE CONTROLNET UNION (used by 7 - Z-Image ControlNet workflow)
+    # -------------------------------------------------------
+    mkdir -p "$COMFYUI_DIR/models/model_patches"
+    ZIMAGE_CN="$COMFYUI_DIR/models/model_patches/Z-Image-Turbo-Fun-Controlnet-Union.safetensors"
+    if [ ! -f "$ZIMAGE_CN" ]; then
+        echo "Downloading Z-Image ControlNet Union model patch..."
+        wget --progress=bar:force:noscroll -O "$ZIMAGE_CN" \
+            "https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union/resolve/main/Z-Image-Turbo-Fun-Controlnet-Union.safetensors?download=true"
+    else
+        echo "Z-Image ControlNet Union already exists."
+    fi
+
+    # -------------------------------------------------------
+    # INFINITETALK / MULTITALK GGUF MODELS
+    # NOTE: The uploaded workflows use GGUF versions (via WanVideoWrapper)
+    # not the .safetensors versions downloaded in download_talking_models()
+    # -------------------------------------------------------
+    mkdir -p "$DIFFUSION_MODELS_DIR"
+
+    # Wan2.1 I2V GGUF base (required by both InfiniteTalk workflows)
+    WAN21_I2V_GGUF="$DIFFUSION_MODELS_DIR/wan2.1-i2v-14b-480p-Q4_0.gguf"
+    if [ ! -f "$WAN21_I2V_GGUF" ]; then
+        echo "Downloading Wan2.1 I2V 14B GGUF Q4_0 (~9 GB)..."
+        wget --progress=bar:force:noscroll -O "$WAN21_I2V_GGUF" \
+            "https://huggingface.co/city96/Wan2.1-I2V-14B-480P-gguf/resolve/main/wan2.1-i2v-14b-480p-Q4_0.gguf?download=true"
+    else
+        echo "Wan2.1 I2V GGUF already exists."
+    fi
+
+    # InfiniteTalk Single GGUF
+    IT_SINGLE_GGUF="$DIFFUSION_MODELS_DIR/Wan2_1-InfiniteTalk_Single_Q8.gguf"
+    if [ ! -f "$IT_SINGLE_GGUF" ]; then
+        echo "Downloading InfiniteTalk Single Q8 GGUF..."
+        wget --progress=bar:force:noscroll -O "$IT_SINGLE_GGUF" \
+            "https://huggingface.co/Kijai/WanVideo_comfy_GGUF/resolve/main/InfiniteTalk/Wan2_1-InfiniteTalk_Single_Q8.gguf?download=true"
+    else
+        echo "InfiniteTalk Single GGUF already exists."
+    fi
+
+    # InfiniteTalk Multi GGUF
+    IT_MULTI_GGUF="$DIFFUSION_MODELS_DIR/Wan2_1-InfiniteTalk_Multi_Q8.gguf"
+    if [ ! -f "$IT_MULTI_GGUF" ]; then
+        echo "Downloading InfiniteTalk Multi Q8 GGUF..."
+        wget --progress=bar:force:noscroll -O "$IT_MULTI_GGUF" \
+            "https://huggingface.co/Kijai/WanVideo_comfy_GGUF/resolve/main/InfiniteTalk/Wan2_1-InfiniteTalk_Multi_Q8.gguf?download=true"
+    else
+        echo "InfiniteTalk Multi GGUF already exists."
+    fi
+
+    # -------------------------------------------------------
+    # WAV2VEC2 SAFETENSORS (WanVideoWrapper needs single .safetensors file)
+    # Different from the chinese-wav2vec2-base folder downloaded previously
+    # -------------------------------------------------------
+    mkdir -p "$COMFYUI_DIR/models/wav2vec2"
+    WAV2VEC_SF="$COMFYUI_DIR/models/wav2vec2/wav2vec2-chinese-base_fp16.safetensors"
+    if [ ! -f "$WAV2VEC_SF" ]; then
+        echo "Downloading wav2vec2-chinese-base fp16 safetensors..."
+        wget --progress=bar:force:noscroll -O "$WAV2VEC_SF" \
+            "https://huggingface.co/Kijai/wav2vec2_safetensors/resolve/main/wav2vec2-chinese-base_fp16.safetensors?download=true"
+    else
+        echo "wav2vec2 safetensors already exists."
+    fi
+
+    # -------------------------------------------------------
+    # UMT5 TEXT ENCODER FOR WANVIDEOWRAPPER (models/clip/ path)
+    # Different from the text_encoders/ version — WanVideoWrapper
+    # specifically loads from models/clip/
+    # -------------------------------------------------------
+    mkdir -p "$COMFYUI_DIR/models/clip"
+    UMT5_CLIP="$COMFYUI_DIR/models/clip/umt5-xxl-enc-bf16.safetensors"
+    if [ ! -f "$UMT5_CLIP" ]; then
+        echo "Downloading UMT5 XXL text encoder for WanVideoWrapper (models/clip/)..."
+        wget --progress=bar:force:noscroll -O "$UMT5_CLIP" \
+            "https://huggingface.co/ALGOTECH/WanVideo_comfy/resolve/main/umt5-xxl-enc-bf16.safetensors?download=true"
+    else
+        echo "UMT5 clip encoder already exists."
+    fi
+
+    # -------------------------------------------------------
+    # WAN2.2 LIGHTX2V LORAS (used by wan2_2_image_to_video.json workflow)
+    # -------------------------------------------------------
+    WAN22_LORA_LOW="$COMFYUI_DIR/models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"
+    if [ ! -f "$WAN22_LORA_LOW" ]; then
+        echo "Downloading Wan2.2 LightX2V low noise LoRA..."
+        wget --progress=bar:force:noscroll -O "$WAN22_LORA_LOW" \
+            "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors?download=true"
+    else
+        echo "Wan2.2 LightX2V low noise LoRA already exists."
+    fi
+
+    WAN22_LORA_HIGH="$COMFYUI_DIR/models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors"
+    if [ ! -f "$WAN22_LORA_HIGH" ]; then
+        echo "Downloading Wan2.2 LightX2V high noise LoRA..."
+        wget --progress=bar:force:noscroll -O "$WAN22_LORA_HIGH" \
+            "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors?download=true"
+    else
+        echo "Wan2.2 LightX2V high noise LoRA already exists."
+    fi
+
+    # -------------------------------------------------------
+    # SD1.5 LORAS
+    # -------------------------------------------------------
+    mkdir -p "$COMFYUI_DIR/models/loras/sd15"
+    CAKE_LORA="$COMFYUI_DIR/models/loras/sd15/CakeStyle.safetensors"
+    if [ ! -f "$CAKE_LORA" ]; then
+        echo "Downloading CakeStyle SD1.5 LoRA (demo asset for Juggernaut LoRA workflow)..."
+        wget --progress=bar:force:noscroll -O "$CAKE_LORA" \
+            "https://huggingface.co/mnemic/CakeStyle-SD1.5-LoRA/resolve/main/CakeStyle.safetensors?download=true"
+    else
+        echo "CakeStyle LoRA already exists."
+    fi
+
+    echo "=========================================="
+    echo "Workflow-required models complete!"
+    echo "=========================================="
+}
+
     cd "$COMFYUI_DIR/custom_nodes"
 
     echo "Checking for custom node updates..."
@@ -1056,4 +1305,5 @@ download_talking_models
 download_wan22_models
 download_utility_models
 download_audio_and_video_utils
+download_workflow_models
 start_comfyui

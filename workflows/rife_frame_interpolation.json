@@ -1,0 +1,557 @@
+{
+  "id": "apexforge-rife-v1",
+  "revision": 0,
+  "last_node_id": 9,
+  "last_link_id": 8,
+  "nodes": [
+    {
+      "id": 1,
+      "type": "MarkdownNote",
+      "pos": [
+        -620,
+        -160
+      ],
+      "size": [
+        560,
+        460
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "\u26a1 ApexForge \u2014 RIFE Frame Interpolation",
+      "properties": {},
+      "widgets_values": [
+        "# \u26a1 ApexForge \u2014 RIFE Frame Interpolation\n\n---\n\n## \ud83d\udfe3 RIFE VFI (Frame Interpolation)\n**Model:** `rife_v4.26.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/frame_interpolation/`\n> Doubles video FPS \u2014 24fps \u2192 48fps, 25fps \u2192 50fps\n\n---\n## \ud83e\udde9 Required Custom Nodes\n- ComfyUI-Frame-Interpolation (Fannovel16)\n\n---\n## \ud83d\udca1 Tips\n- multiplier=2 doubles frame count and FPS\n- multiplier=4 quadruples \u2014 use for very slow-motion output\n- Fast mode is slightly lower quality but much faster\n- Best used after InfiniteTalk, Wan2.x, or any video generation\n- Set VHS_VideoCombine frame_rate to match your target FPS\n\n---\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+      ],
+      "color": "#231535",
+      "bgcolor": "#3f2460"
+    },
+    {
+      "id": 2,
+      "type": "VHS_LoadVideo",
+      "pos": [
+        0,
+        100
+      ],
+      "size": [
+        420,
+        270
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            1,
+            2
+          ],
+          "slot_index": 0
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": [
+            7
+          ],
+          "slot_index": 2
+        },
+        {
+          "name": "video_info",
+          "type": "VHS_VIDEOINFO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_LoadVideo"
+      },
+      "widgets_values": {
+        "video": "input_video.mp4",
+        "force_rate": 0,
+        "force_size": "Disabled",
+        "custom_width": 512,
+        "custom_height": 512,
+        "frame_load_cap": 0,
+        "skip_first_frames": 0,
+        "select_every_nth": 1,
+        "choose video to upload": "image"
+      }
+    },
+    {
+      "id": 3,
+      "type": "VHS_VideoInfo",
+      "pos": [
+        460,
+        280
+      ],
+      "size": [
+        260,
+        206
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video_info",
+          "type": "VHS_VIDEOINFO",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "source_fps\ud83d\udfe8",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "source_frame_count\ud83d\udfe8",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "source_duration\ud83d\udfe8",
+          "type": "FLOAT",
+          "links": null
+        },
+        {
+          "name": "source_width\ud83d\udfe8",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "source_height\ud83d\udfe8",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "loaded_fps\ud83d\udfe6",
+          "type": "FLOAT",
+          "links": [
+            3
+          ],
+          "slot_index": 5
+        },
+        {
+          "name": "loaded_frame_count\ud83d\udfe6",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "loaded_duration\ud83d\udfe6",
+          "type": "FLOAT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoInfo"
+      },
+      "widgets_values": {}
+    },
+    {
+      "id": 4,
+      "type": "RIFE VFI",
+      "pos": [
+        460,
+        60
+      ],
+      "size": [
+        360,
+        230
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 1
+        },
+        {
+          "name": "multiplier",
+          "type": "INT",
+          "widget": {
+            "name": "multiplier"
+          },
+          "link": null
+        },
+        {
+          "name": "fast_mode",
+          "type": "BOOL",
+          "widget": {
+            "name": "fast_mode"
+          },
+          "link": null
+        },
+        {
+          "name": "ensemble",
+          "type": "BOOL",
+          "widget": {
+            "name": "ensemble"
+          },
+          "link": null
+        },
+        {
+          "name": "scale_factor",
+          "type": "FLOAT",
+          "widget": {
+            "name": "scale_factor"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "FRAMES",
+          "type": "IMAGE",
+          "links": [
+            4
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "RIFE VFI",
+        "ckpt_name": "rife_v4.26.safetensors"
+      },
+      "widgets_values": [
+        "rife_v4.26.safetensors",
+        2,
+        true,
+        true,
+        1.0
+      ]
+    },
+    {
+      "id": 5,
+      "type": "Note",
+      "pos": [
+        460,
+        310
+      ],
+      "size": [
+        360,
+        88
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "Output FPS = Source FPS \u00d7 multiplier",
+      "properties": {},
+      "widgets_values": [
+        "e.g. 25fps \u00d7 2 = 50fps output\nSet VHS_VideoCombine frame_rate\nto match (e.g. 50)"
+      ],
+      "color": "#231535",
+      "bgcolor": "#3f2460"
+    },
+    {
+      "id": 6,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        870,
+        60
+      ],
+      "size": [
+        420,
+        300
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 4
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "link": 7,
+          "shape": 7
+        },
+        {
+          "name": "meta_batch",
+          "type": "VHS_BatchManager",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "frame_rate",
+          "type": "FLOAT",
+          "link": 3,
+          "widget": {
+            "name": "frame_rate"
+          }
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 50,
+        "loop_count": 0,
+        "filename_prefix": "RIFE_interpolated",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": true,
+        "trim_to_audio": false,
+        "pingpong": false,
+        "save_output": true
+      }
+    },
+    {
+      "id": 7,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        870,
+        390
+      ],
+      "size": [
+        420,
+        310
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 2
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "comparer_mode": "Slide"
+      },
+      "widgets_values": [
+        []
+      ]
+    },
+    {
+      "id": 8,
+      "type": "VHS_VideoDecode",
+      "pos": [
+        460,
+        420
+      ],
+      "size": [
+        360,
+        130
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "frames",
+          "type": "IMAGE",
+          "link": 4
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VHS_VideoDecode"
+      },
+      "widgets_values": [
+        1,
+        false,
+        0
+      ]
+    },
+    {
+      "id": 9,
+      "type": "PreviewImage",
+      "pos": [
+        870,
+        720
+      ],
+      "size": [
+        420,
+        280
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 6
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      1,
+      2,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ],
+    [
+      2,
+      2,
+      0,
+      7,
+      0,
+      "IMAGE"
+    ],
+    [
+      3,
+      3,
+      5,
+      6,
+      4,
+      "FLOAT"
+    ],
+    [
+      4,
+      4,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      8,
+      0,
+      7,
+      1,
+      "IMAGE"
+    ],
+    [
+      6,
+      4,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      7,
+      2,
+      2,
+      6,
+      1,
+      "AUDIO"
+    ],
+    [
+      8,
+      4,
+      0,
+      8,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "title": "Step 1 \u2014 Upload Video",
+      "bounding": [
+        -10,
+        60,
+        440,
+        330
+      ],
+      "color": "#3f2460",
+      "font_size": 18,
+      "flags": {}
+    },
+    {
+      "id": 2,
+      "title": "Step 2 \u2014 Interpolate",
+      "bounding": [
+        450,
+        30,
+        380,
+        270
+      ],
+      "color": "#3f2460",
+      "font_size": 18,
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "Step 3 \u2014 Save Output",
+      "bounding": [
+        860,
+        30,
+        440,
+        340
+      ],
+      "color": "#3f2460",
+      "font_size": 18,
+      "flags": {}
+    }
+  ],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8,
+      "offset": [
+        680,
+        250
+      ]
+    },
+    "frontendVersion": "1.38.0",
+    "workflowRendererVersion": "LG"
+  },
+  "version": 0.4
+}

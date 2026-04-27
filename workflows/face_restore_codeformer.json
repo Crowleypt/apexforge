@@ -1,0 +1,218 @@
+{
+  "last_node_id": 4,
+  "last_link_id": 3,
+  "nodes": [
+    {
+      "id": 5,
+      "type": "MarkdownNote",
+      "pos": [
+        1161.615478515625,
+        -120
+      ],
+      "size": [
+        520,
+        380
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "\u26a1 ApexForge \u2014 CodeFormer \u2014 Face Restoration",
+      "properties": {},
+      "widgets_values": [
+        "# \u26a1 ApexForge \u2014 CodeFormer \u2014 Face Restoration\n\n---\n\n## \ud83d\udfe3 FaceRestoreModelLoader\n**Model:** `codeformer.pth`\n\ud83d\udcc1 **Location:** `ComfyUI/models/facerestore_models/`\n> Best face restoration \u2014 works great on talking avatar outputs\n\n---\n\n## \ud83e\udde9 Required Custom Nodes\n- facerestore_cf\n\n---\n\n## \ud83d\udca1 Tips\n- Fidelity weight 0.5 = balanced restore vs original. Lower = more aggressive fix\n- Run this after InfiniteTalk/MultiTalk to clean up face artifacts\n- GFPGANv1.4.pth also pre-installed for faster, lighter restoration\n\n---\n\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+      ],
+      "color": "#231535",
+      "bgcolor": "#3f2460"
+    },
+    {
+      "id": 1,
+      "type": "FaceRestoreModelLoader",
+      "pos": [
+        1788.8193359375,
+        1789.1917724609375
+      ],
+      "size": [
+        315,
+        58
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "FACERESTORE_MODEL",
+          "type": "FACERESTORE_MODEL",
+          "links": [
+            1
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FaceRestoreModelLoader"
+      },
+      "widgets_values": [
+        "codeformer.pth"
+      ]
+    },
+    {
+      "id": 3,
+      "type": "LoadImage",
+      "pos": [
+        1721.615478515625,
+        1901.4969482421875
+      ],
+      "size": [
+        373.87310791015625,
+        377.95501708984375
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            2
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "ComfyUI_00639_.png",
+        "image"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "FaceRestoreCFWithModel",
+      "pos": [
+        2146.044189453125,
+        1772.280029296875
+      ],
+      "size": [
+        315,
+        102
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "facerestore_model",
+          "type": "FACERESTORE_MODEL",
+          "link": 1
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3
+          ],
+          "slot_index": 0
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FaceRestoreCFWithModel"
+      },
+      "widgets_values": [
+        "retinaface_resnet50",
+        0.5
+      ]
+    },
+    {
+      "id": 4,
+      "type": "PreviewImage",
+      "pos": [
+        2519.566162109375,
+        1904.9365234375
+      ],
+      "size": [
+        314.74957275390625,
+        322.6661682128906
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 3
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    }
+  ],
+  "links": [
+    [
+      1,
+      1,
+      0,
+      2,
+      0,
+      "FACERESTORE_MODEL"
+    ],
+    [
+      2,
+      3,
+      0,
+      2,
+      1,
+      "IMAGE"
+    ],
+    [
+      3,
+      2,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 1.2936066304537923,
+      "offset": [
+        -1425.431993115811,
+        -1713.536022390114
+      ]
+    },
+    "node_versions": {
+      "facerestore_cf": "67f90bc6be976fb58169866155346b0da13bebee",
+      "comfy-core": "0.3.14"
+    },
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

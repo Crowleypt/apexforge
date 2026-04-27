@@ -1,0 +1,344 @@
+{
+  "id": "23b41169-8935-4a6e-8fa6-010f051cf667",
+  "revision": 0,
+  "last_node_id": 9,
+  "last_link_id": 9,
+  "nodes": [
+    {
+      "id": 2,
+      "type": "LoadImage",
+      "pos": [
+        -595.3457036137837,
+        163.34029579945317
+      ],
+      "size": [
+        412.93467192717935,
+        496.0708525637052
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3,
+            6
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.13.0",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "Woman1.jpg",
+        "image"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "Image Comparer (rgthree)",
+      "pos": [
+        367.4564043047593,
+        163.34029579945317
+      ],
+      "size": [
+        412.93467192717935,
+        496.0708525637052
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "dir": 3,
+          "name": "image_a",
+          "type": "IMAGE",
+          "link": 3
+        },
+        {
+          "dir": 3,
+          "name": "image_b",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "rgthree-comfy",
+        "ver": "8ff50e4521881eca1fe26aec9615fc9362474931",
+        "comparer_mode": "Slide"
+      },
+      "widgets_values": [
+        [
+          {
+            "name": "A",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_dcqno_00007_.png&type=temp&subfolder=&rand=0.9546159251152824"
+          },
+          {
+            "name": "B",
+            "selected": true,
+            "url": "/api/view?filename=rgthree.compare._temp_dcqno_00008_.png&type=temp&subfolder=&rand=0.9848141169919911"
+          }
+        ]
+      ]
+    },
+    {
+      "id": 1,
+      "type": "MarkdownNote",
+      "pos": [
+        -1159.932394224641,
+        163.34029579945317
+      ],
+      "size": [
+        539.7419169846861,
+        309.0809054291223
+      ],
+      "flags": {
+        "collapsed": false
+      },
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "\u26a1 ApexForge \u2014 Upscale \u2014 With ESRGAN Model",
+      "properties": {},
+      "widgets_values": [
+        "# \u26a1 ApexForge \u2014 Upscale \u2014 With ESRGAN Model\n\n---\n\n## \ud83d\udfe3 UpscaleModelLoader\n**Model:** `4x_NMKD-Siax_200k.pth`\n\ud83d\udcc1 **Location:** `ComfyUI/models/upscale_models/`\n> Sharp balanced upscaler \u2014 4x output\n\n---\n## \ud83e\udde9 Required Custom Nodes\n- rgthree-comfy\n\n---\n## \ud83d\udca1 Tips\n- Set ImageScaleBy to 1.0 to use pure model output (already 4x)\n- Increase scale >1 to push beyond 4x (may soften)\n- Pre-installed: 4x-UltraSharp, RealESRGAN_x4plus, 4x_NMKD-Siax_200k\n\n---\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+      ],
+      "color": "#231535",
+      "bgcolor": "#3f2460"
+    },
+    {
+      "id": 4,
+      "type": "SaveImage",
+      "pos": [
+        798.669371427238,
+        163.34029579945317
+      ],
+      "size": [
+        412.93467192717935,
+        496.0708525637052
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 8
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.13.0",
+        "Node name for S&R": "SaveImage"
+      },
+      "widgets_values": [
+        "Up"
+      ]
+    },
+    {
+      "id": 7,
+      "type": "UpscaleModelLoader",
+      "pos": [
+        -496.37348422647466,
+        53.94260522725555
+      ],
+      "size": [
+        312.0254860047787,
+        58
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.13.0",
+        "Node name for S&R": "UpscaleModelLoader"
+      },
+      "widgets_values": [
+        "4x_NMKD-Siax_200k.pth"
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 9,
+      "type": "ImageScaleBy",
+      "pos": [
+        113.9804177399817,
+        163.34029579945317
+      ],
+      "size": [
+        235.1976913694782,
+        82
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            8,
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.13.0",
+        "Node name for S&R": "ImageScaleBy"
+      },
+      "widgets_values": [
+        "lanczos",
+        1
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 8,
+      "type": "ImageUpscaleWithModel",
+      "pos": [
+        -164.13273649130497,
+        163.34029579945317
+      ],
+      "size": [
+        259.8348590359873,
+        46
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 5
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.13.0",
+        "Node name for S&R": "ImageUpscaleWithModel"
+      },
+      "widgets_values": [],
+      "color": "#432",
+      "bgcolor": "#653"
+    }
+  ],
+  "links": [
+    [
+      3,
+      2,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      7,
+      0,
+      8,
+      0,
+      "UPSCALE_MODEL"
+    ],
+    [
+      6,
+      2,
+      0,
+      8,
+      1,
+      "IMAGE"
+    ],
+    [
+      7,
+      8,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      8,
+      9,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ],
+    [
+      9,
+      9,
+      0,
+      6,
+      1,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "workflowRendererVersion": "LG",
+    "ds": {
+      "scale": 1.0152559799477616,
+      "offset": [
+        1251.6507042332166,
+        102.00373832850221
+      ]
+    },
+    "frontendVersion": "1.38.13",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
