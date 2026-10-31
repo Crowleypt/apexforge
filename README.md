@@ -19,7 +19,7 @@ Walkthroughs and guides: https://alexanderharte.com
 | 05 - Audio | ACE-Step 1.5 music, MMAudio video-to-sound |
 | 06 - Post Processing | Upscale (simple, ESRGAN), Z-Image AI upscaler, CodeFormer face restore, RIFE frame interpolation |
 
-Custom nodes: ComfyUI-Manager (built in), KJNodes, Civicomfy, MMAudio, Frame-Interpolation, Chatterbox, GGUF, rgthree, VideoHelperSuite, controlnet_aux, facerestore_cf, WanVideoWrapper, ACE-Step.
+Custom nodes: ComfyUI-Manager (built in), KJNodes, Civicomfy, MMAudio, Frame-Interpolation, Chatterbox, GGUF, rgthree, VideoHelperSuite, controlnet_aux, facerestore_cf, WanVideoWrapper, ACE-Step, TiledDiffusion.
 
 ## Setup
 

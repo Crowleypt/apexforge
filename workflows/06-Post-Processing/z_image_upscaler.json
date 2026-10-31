@@ -474,7 +474,7 @@
         "Node name for S&R": "UNETLoader"
       },
       "widgets_values": [
-        "z-image\\z-image-turbo_fp8_scaled_e5m2_KJ.safetensors",
+        "z-image/z-image-turbo_fp8_scaled_e5m2_KJ.safetensors",
         "default"
       ]
     },

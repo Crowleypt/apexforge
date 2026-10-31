@@ -307,7 +307,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "sd15\\juggernaut_reborn.safetensors"
+        "sd15/juggernaut_reborn.safetensors"
       ]
     },
     {

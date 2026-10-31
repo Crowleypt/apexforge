@@ -482,7 +482,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "z-image\\z-image-turbo-fp8-aio.safetensors"
+        "z-image/z-image-turbo-fp8-aio.safetensors"
       ]
     },
     {

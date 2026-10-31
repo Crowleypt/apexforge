@@ -50,7 +50,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "sd15\\juggernaut_reborn.safetensors"
+        "sd15/juggernaut_reborn.safetensors"
       ]
     },
     {
@@ -502,7 +502,7 @@
         "Node name for S&R": "ControlNetLoader"
       },
       "widgets_values": [
-        "sd15\\control_v11p_sd15_canny_fp16.safetensors"
+        "sd15/control_v11p_sd15_canny_fp16.safetensors"
       ],
       "color": "#432",
       "bgcolor": "#653"

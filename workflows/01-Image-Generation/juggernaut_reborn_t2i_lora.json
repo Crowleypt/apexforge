@@ -200,7 +200,7 @@
         "Node name for S&R": "CheckpointLoaderSimple"
       },
       "widgets_values": [
-        "sd15\\juggernaut_reborn.safetensors"
+        "sd15/juggernaut_reborn.safetensors"
       ]
     },
     {
@@ -364,7 +364,7 @@
         "Node name for S&R": "LoraLoaderModelOnly"
       },
       "widgets_values": [
-        "sd15\\CakeStyle.safetensors",
+        "sd15/CakeStyle.safetensors",
         1
       ],
       "color": "#223",

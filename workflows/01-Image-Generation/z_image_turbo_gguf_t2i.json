@@ -330,7 +330,7 @@
         "Node name for S&R": "UnetLoaderGGUF"
       },
       "widgets_values": [
-        "z-image\\z-image-turbo-q4_k_s.gguf"
+        "z-image/z-image-turbo-q4_k_s.gguf"
       ]
     },
     {

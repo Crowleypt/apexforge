@@ -42,6 +42,7 @@ CUSTOM_NODES=(
     "facerestore_cf|https://github.com/mav-rik/facerestore_cf.git|ff4d7a5c102441d8f058dd6135797ffb57b6c6ad"
     "ComfyUI-WanVideoWrapper|https://github.com/kijai/ComfyUI-WanVideoWrapper.git|088128b224242e110d3906c6750e9a3a348a659b"
     "ACE-Step-ComfyUI|https://github.com/ace-step/ACE-Step-ComfyUI.git|5de16c9bc43abdbe9a3104d220bba9f71b51165a"
+    "ComfyUI-TiledDiffusion|https://github.com/shiimizu/ComfyUI-TiledDiffusion.git|a155b1bac39147381aeaa52b9be42e545626a44f"
 )
 
 # Clone a repo if missing, then move it to the pinned ref (or latest when
