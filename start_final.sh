@@ -1169,11 +1169,8 @@ start_comfyui() {
     cd "$COMFYUI_DIR"
 
     FIXED_ARGS="--listen 0.0.0.0 --port 8188 --enable-manager"
-    CUSTOM_ARGS=""
 
-    if [ -f "$ARGS_FILE" ]; then
-        CUSTOM_ARGS=$(grep -v '^#' "$ARGS_FILE" | tr '\n' ' ')
-    else
+    if [ ! -f "$ARGS_FILE" ]; then
         echo "# Add one argument per line" > "$ARGS_FILE"
         echo "--preview-method auto" >> "$ARGS_FILE"
         # Only add --use-sage-attention if SageAttention is actually installed
@@ -1198,6 +1195,10 @@ start_comfyui() {
             echo "SageAttention detected — enabled in ComfyUI args"
         fi
     fi
+
+    # Read args only after the SageAttention flag has been added or removed,
+    # so this boot uses the same args the file now holds
+    CUSTOM_ARGS=$(grep -v '^#' "$ARGS_FILE" | tr '\n' ' ')
 
     echo "=========================================="
     echo "Starting ComfyUI on port 8188"
