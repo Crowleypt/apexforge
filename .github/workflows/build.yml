@@ -1,5 +1,8 @@
 name: Build and Push ApexForge Docker Image
 
+# Pushes to main build a test image tagged with the commit SHA only.
+# Release: push a git tag like v1.1.0 (must match APEXFORGE_VERSION in
+# start_final.sh) to publish :v1.1.0 and move :latest.
 on:
   push:
     branches:
@@ -7,6 +10,8 @@ on:
     paths:
       - 'Dockerfile'
       - 'start_final.sh'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -43,6 +48,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # ── 1b. Release tag must match the script version ─────────
+      - name: Check release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          SCRIPT_VERSION=$(grep -oP '^APEXFORGE_VERSION="\K[^"]+' start_final.sh)
+          if [ "v$SCRIPT_VERSION" != "${{ github.ref_name }}" ]; then
+            echo "Tag ${{ github.ref_name }} does not match APEXFORGE_VERSION=$SCRIPT_VERSION"
+            exit 1
+          fi
+
       # ── 2. Set up Docker Buildx ──────────────────────────────
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -62,8 +77,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/apexforge:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/apexforge:${{ github.sha }}
+            ${{ startsWith(github.ref, 'refs/tags/v') && format('{0}/apexforge:{1}', secrets.DOCKERHUB_USERNAME, github.ref_name) || '' }}
+            ${{ startsWith(github.ref, 'refs/tags/v') && format('{0}/apexforge:latest', secrets.DOCKERHUB_USERNAME) || '' }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -72,5 +88,5 @@ jobs:
         run: |
           echo "=================================================="
           echo "ApexForge image pushed to Docker Hub!"
-          echo "Image: ${{ secrets.DOCKERHUB_USERNAME }}/apexforge:latest"
+          echo "Image: ${{ secrets.DOCKERHUB_USERNAME }}/apexforge:${{ github.ref_type == 'tag' && github.ref_name || github.sha }}"
           echo "=================================================="

@@ -331,7 +331,7 @@
       "title": "\u26a1 ApexForge \u2014 Juggernaut Reborn \u2014 Image to Image",
       "properties": {},
       "widgets_values": [
-        "# \u26a1 ApexForge \u2014 Juggernaut Reborn \u2014 Image to Image\n\n---\n\n## \ud83d\udfe3 CheckpointLoaderSimple\n**Model:** `juggernaut_reborn.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/checkpoints/sd15/`\n> SD 1.5 model \u2014 ~2 GB\n\n---\n\n## \ud83e\udde9 Required Custom Nodes\n- None \u2014 all core nodes\n\n---\n\n## \ud83d\udca1 Tips\n- Set denoise to 0.4\u20130.7 to preserve the input image structure\n\n---\n\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+        "# \u26a1 ApexForge \u2014 Juggernaut Reborn \u2014 Image to Image\n\n---\n\n## \ud83d\udfe3 CheckpointLoaderSimple\n**Model:** `juggernaut_reborn.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/checkpoints/sd15/`\n> SD 1.5 model \u2014 ~2 GB\n\n---\n\n## \ud83e\udde9 Required Custom Nodes\n- None \u2014 all core nodes\n\n---\n\n## \ud83d\udca1 Tips\n- Set denoise to 0.4\u20130.7 to preserve the input image structure\n\n---\n\n## \ud83d\udcda ApexForge by Alex Harte\n\ud83c\udf10 **Guides & updates:** https://alexanderharte.com\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
       ],
       "color": "#231535",
       "bgcolor": "#3f2460"

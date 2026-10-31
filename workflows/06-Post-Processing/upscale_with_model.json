@@ -114,7 +114,7 @@
       "title": "\u26a1 ApexForge \u2014 Upscale \u2014 With ESRGAN Model",
       "properties": {},
       "widgets_values": [
-        "# \u26a1 ApexForge \u2014 Upscale \u2014 With ESRGAN Model\n\n---\n\n## \ud83d\udfe3 UpscaleModelLoader\n**Model:** `4x_NMKD-Siax_200k.pth`\n\ud83d\udcc1 **Location:** `ComfyUI/models/upscale_models/`\n> Sharp balanced upscaler \u2014 4x output\n\n---\n## \ud83e\udde9 Required Custom Nodes\n- rgthree-comfy\n\n---\n## \ud83d\udca1 Tips\n- Set ImageScaleBy to 1.0 to use pure model output (already 4x)\n- Increase scale >1 to push beyond 4x (may soften)\n- Pre-installed: 4x-UltraSharp, RealESRGAN_x4plus, 4x_NMKD-Siax_200k\n\n---\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+        "# \u26a1 ApexForge \u2014 Upscale \u2014 With ESRGAN Model\n\n---\n\n## \ud83d\udfe3 UpscaleModelLoader\n**Model:** `4x_NMKD-Siax_200k.pth`\n\ud83d\udcc1 **Location:** `ComfyUI/models/upscale_models/`\n> Sharp balanced upscaler \u2014 4x output\n\n---\n## \ud83e\udde9 Required Custom Nodes\n- rgthree-comfy\n\n---\n## \ud83d\udca1 Tips\n- Set ImageScaleBy to 1.0 to use pure model output (already 4x)\n- Increase scale >1 to push beyond 4x (may soften)\n- Pre-installed: 4x-UltraSharp, RealESRGAN_x4plus, 4x_NMKD-Siax_200k\n\n---\n## \ud83d\udcda ApexForge by Alex Harte\n\ud83c\udf10 **Guides & updates:** https://alexanderharte.com\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
       ],
       "color": "#231535",
       "bgcolor": "#3f2460"

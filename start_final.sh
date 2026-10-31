@@ -1,7 +1,9 @@
 #!/bin/bash
+# ApexForge by Alex Harte (https://alexanderharte.com)
 # Do NOT use set -e — git pull failures should not kill the whole script
 
 # --- Configuration ---
+APEXFORGE_VERSION="1.1.0"
 COMFYUI_DIR="/comfyui/ComfyUI"
 ARGS_FILE="/comfyui/comfyui_args.txt"
 CHECKPOINTS_DIR="$COMFYUI_DIR/models/checkpoints"
@@ -9,9 +11,56 @@ DIFFUSION_MODELS_DIR="$COMFYUI_DIR/models/diffusion_models"
 TEXT_ENCODERS_DIR="$COMFYUI_DIR/models/text_encoders"
 VAE_DIR="$COMFYUI_DIR/models/vae"
 
-# Optional: set CIVITAI_TOKEN as a RunPod environment variable for gated models
-# Without this, Civitai downloads (Juggernaut, Skin Texture LoRA) may fail silently
+# Optional: Civitai API key for the Skin Texture LoRA download.
+# In the RunPod template, set CIVITAI_TOKEN={{ RUNPOD_SECRET_civitai }} so the
+# key lives in RunPod Secrets instead of plain text. Sent as a header, never in the URL.
 CIVITAI_TOKEN="${CIVITAI_TOKEN:-}"
+
+# Optional: set APEXFORGE_UNCENSORED_ENCODERS=true to also download the
+# community "abliterated"/"heretic" Qwen3-4B text encoders. Off by default;
+# the bundled workflows use the official Qwen3-4B encoders.
+APEXFORGE_UNCENSORED_ENCODERS="${APEXFORGE_UNCENSORED_ENCODERS:-false}"
+
+# --- Pinned versions ---
+# ComfyUI, custom nodes and SageAttention are pinned to versions tested with
+# this release. Set APEXFORGE_TRACK_LATEST=true to pull the newest code instead
+# (untested — things may break).
+APEXFORGE_TRACK_LATEST="${APEXFORGE_TRACK_LATEST:-false}"
+COMFYUI_REF="v0.43.0"
+SAGEATTENTION_REF="v2.2.0"
+# dir|repo|commit
+CUSTOM_NODES=(
+    "ComfyUI-KJNodes|https://github.com/kijai/ComfyUI-KJNodes.git|ab72eda7ffad6280422d71ab7d54d3fb87c0ba18"
+    "Civicomfy|https://github.com/MoonGoblinDev/Civicomfy.git|555e984bbcb02fc955075cb8eb699a6884c51239"
+    "ComfyUI-MMAudio|https://github.com/kijai/ComfyUI-MMAudio.git|8eaeb72edc3aaf2059b57f2d96a1f6f689f19ae2"
+    "ComfyUI-Frame-Interpolation|https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git|26545cc2dd95bc3d27f056016300673bdeee78f5"
+    "ComfyUI-Chatterbox|https://github.com/wildminder/ComfyUI-Chatterbox.git|7175b1e42d652e12482da57c1b44f74194649c4a"
+    "ComfyUI-GGUF|https://github.com/city96/ComfyUI-GGUF.git|6ea2651e7df66d7585f6ffee804b20e92fb38b8a"
+    "rgthree-comfy|https://github.com/rgthree/rgthree-comfy.git|bc48c6aaeca87bedbc14245d89f9bc6be37a630e"
+    "ComfyUI-VideoHelperSuite|https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git|4d907bee61e92c2e65af3bd6383a4e4d356126d1"
+    "comfyui_controlnet_aux|https://github.com/Fannovel16/comfyui_controlnet_aux.git|a587a4c1594524c1d2de5cd1a86cd868ff448e1c"
+    "facerestore_cf|https://github.com/mav-rik/facerestore_cf.git|ff4d7a5c102441d8f058dd6135797ffb57b6c6ad"
+    "ComfyUI-WanVideoWrapper|https://github.com/kijai/ComfyUI-WanVideoWrapper.git|088128b224242e110d3906c6750e9a3a348a659b"
+    "ACE-Step-ComfyUI|https://github.com/ace-step/ACE-Step-ComfyUI.git|5de16c9bc43abdbe9a3104d220bba9f71b51165a"
+)
+
+# Clone a repo if missing, then move it to the pinned ref (or latest when
+# APEXFORGE_TRACK_LATEST=true).
+sync_repo() {
+    local dir="$1" url="$2" ref="$3"
+    if [ ! -d "$dir/.git" ]; then
+        git clone "$url" "$dir" || { echo "WARNING: Could not clone $url"; return 1; }
+    fi
+    if [ "$APEXFORGE_TRACK_LATEST" = "true" ]; then
+        local branch
+        branch=$(git -C "$dir" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)
+        git -C "$dir" checkout -q "${branch#origin/}" 2>/dev/null || git -C "$dir" checkout -q main 2>/dev/null
+        git -C "$dir" pull -q || echo "WARNING: Could not update $dir."
+    elif [ "$(git -C "$dir" rev-parse HEAD 2>/dev/null)" != "$(git -C "$dir" rev-parse "$ref^{commit}" 2>/dev/null)" ]; then
+        git -C "$dir" fetch -q --tags origin || echo "WARNING: Could not fetch $dir."
+        git -C "$dir" checkout -q "$ref" || echo "WARNING: Could not check out $ref in $dir."
+    fi
+}
 
 # --- Use system Python (has PyTorch 2.10.0 stable baked into image) ---
 # SageAttention is installed at runtime on first boot (requires live GPU)
@@ -19,46 +68,67 @@ CIVITAI_TOKEN="${CIVITAI_TOKEN:-}"
 # --- Function Definitions ---
 
 # Function to start JupyterLab in the background
+# Same pattern as RunPod's official images (github.com/runpod/containers):
+# JupyterLab only starts with a password (JUPYTER_PASSWORD, which RunPod sets
+# when "Start Jupyter Notebook" is ticked) or an explicit JUPYTER_DISABLE_AUTH=true.
 start_jupyter() {
+    if [ "$JUPYTER_DISABLE_AUTH" = "true" ]; then
+        echo "WARNING: JUPYTER_DISABLE_AUTH=true — JupyterLab has NO password."
+        echo "WARNING: Anyone with this pod's port 8888 URL gets a root shell."
+        JUPYTER_TOKEN=""
+    elif [ -n "$JUPYTER_PASSWORD" ]; then
+        JUPYTER_TOKEN="$JUPYTER_PASSWORD"
+    else
+        echo "JupyterLab not started: set JUPYTER_PASSWORD to enable it."
+        return
+    fi
+
     echo "=========================================="
     echo "Starting JupyterLab on port 8888"
     echo "=========================================="
-    
-    mkdir -p /root/.jupyter
-    
-    if [ ! -f /root/.jupyter/jupyter_lab_config.py ]; then
-        jupyter lab --generate-config
-    fi
-    
+    mkdir -p /comfyui
     nohup jupyter lab \
         --ip=0.0.0.0 \
         --port=8888 \
         --no-browser \
         --allow-root \
-        --ServerApp.token='' \
-        --ServerApp.password='' \
+        --IdentityProvider.token="$JUPYTER_TOKEN" \
         --ServerApp.root_dir=/comfyui \
-        --ServerApp.allow_origin='*' \
         > /comfyui/jupyter.log 2>&1 &
-    
     echo "JupyterLab started on port 8888"
 }
 
-# Function to install or update ComfyUI
+# Function to install or update ComfyUI (pinned to COMFYUI_REF)
 setup_comfyui() {
+    mkdir -p /comfyui
     if [ ! -d "$COMFYUI_DIR" ]; then
-        echo "ComfyUI not found. Cloning repository..."
-        mkdir -p /comfyui
-        git clone https://github.com/Comfy-Org/ComfyUI.git "$COMFYUI_DIR"
-        cd "$COMFYUI_DIR"
-        echo "Installing ComfyUI dependencies into system Python..."
-        pip install --no-cache-dir -r requirements.txt
+        echo "ComfyUI not found. Cloning repository ($COMFYUI_REF)..."
     else
-        echo "ComfyUI found. Checking for updates..."
-        cd "$COMFYUI_DIR"
-        git pull || echo "WARNING: Could not pull ComfyUI updates. Continuing with existing version."
-        echo "Updating core dependencies..."
-        pip install --no-cache-dir -r requirements.txt || echo "WARNING: Could not update core dependencies."
+        echo "ComfyUI found. Checking version ($COMFYUI_REF)..."
+    fi
+    sync_repo "$COMFYUI_DIR" https://github.com/Comfy-Org/ComfyUI.git "$COMFYUI_REF"
+    cd "$COMFYUI_DIR" || return
+    # Reinstall dependencies only when the ComfyUI version changed
+    if [ "$(cat .apexforge_deps 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
+        echo "Installing ComfyUI + ComfyUI-Manager dependencies..."
+        pip install --no-cache-dir -r requirements.txt -r manager_requirements.txt \
+            && git rev-parse HEAD > .apexforge_deps \
+            || echo "WARNING: Could not install core dependencies."
+    fi
+    cd "$COMFYUI_DIR"
+    echo "ComfyUI version: $(git describe --tags 2>/dev/null || git rev-parse --short HEAD)"
+}
+
+# Keep ComfyUI-Manager on its safe default security level. Manager v4 stores
+# its config in ComfyUI's protected user/__manager folder.
+configure_manager() {
+    local cfg="$COMFYUI_DIR/user/__manager/config.ini"
+    mkdir -p "$(dirname "$cfg")"
+    if [ ! -f "$cfg" ]; then
+        printf '[default]\nsecurity_level = normal\n' > "$cfg"
+    elif grep -qE '^security_level *= *(weak|normal-)' "$cfg"; then
+        echo "Raising ComfyUI-Manager security_level to normal."
+        sed -i -E 's/^security_level *=.*/security_level = normal/' "$cfg"
     fi
 }
 
@@ -352,12 +422,13 @@ setup_workflows() {
     mkdir -p "$WORKFLOWS_DIR/05 - Audio"
     mkdir -p "$WORKFLOWS_DIR/06 - Post Processing"
 
-    # Clone the repo to get the latest workflows
-    # Uses --depth 1 for speed (no history needed) and --no-tags to minimize download
-    echo "Cloning ApexForge repo for workflows..."
+    # Clone the workflows matching this image's release tag (falls back to main)
+    # Uses --depth 1 for speed (no history needed)
+    echo "Cloning ApexForge workflows (v$APEXFORGE_VERSION)..."
     rm -rf "$REPO_TMP"
-    if git clone --depth 1 --no-tags \
-        https://github.com/Crowleypt/apexforge.git "$REPO_TMP" 2>&1; then
+    if git clone --depth 1 --branch "v$APEXFORGE_VERSION" \
+        https://github.com/Crowleypt/apexforge.git "$REPO_TMP" 2>&1 \
+        || git clone --depth 1 https://github.com/Crowleypt/apexforge.git "$REPO_TMP" 2>&1; then
 
         WF_SRC="$REPO_TMP/workflows"
 
@@ -686,8 +757,11 @@ download_zimage_loras() {
     if [ ! -f "$SKIN_TEXTURE" ]; then
         echo "Downloading Realistic Skin Texture LoRA..."
         SKIN_URL="https://civitai.com/api/download/models/691191?type=Model&format=SafeTensor"
-        [ -n "$CIVITAI_TOKEN" ] && SKIN_URL="${SKIN_URL}&token=${CIVITAI_TOKEN}"
-        wget --progress=bar:force:noscroll -O "$SKIN_TEXTURE" "$SKIN_URL"
+        AUTH_HEADER=()
+        [ -n "$CIVITAI_TOKEN" ] && AUTH_HEADER=(-H "Authorization: Bearer $CIVITAI_TOKEN")
+        # curl (not wget) because it drops the auth header when Civitai
+        # redirects to its storage host, so the key only goes to civitai.com
+        curl -fL --progress-bar "${AUTH_HEADER[@]}" -o "$SKIN_TEXTURE" "$SKIN_URL"
         FILE_SIZE=$(stat -c%s "$SKIN_TEXTURE" 2>/dev/null || echo 0)
         if [ "$FILE_SIZE" -lt 1000000 ]; then
             echo "WARNING: Skin Texture LoRA download may have failed (needs CIVITAI_TOKEN?). Removing..."
@@ -824,130 +898,35 @@ download_zimage_models() {
     echo "z-image model setup complete!"
 }
 
-# Function to install pre-configured custom nodes
+# Function to install pre-configured custom nodes (pinned in CUSTOM_NODES)
 install_custom_nodes() {
     echo "=========================================="
     echo "Installing pre-configured custom nodes..."
     echo "=========================================="
-    cd "$COMFYUI_DIR/custom_nodes"
-    
-    if [ ! -d "ComfyUI-Manager" ]; then
-        echo "Installing ComfyUI-Manager..."
-        git clone https://github.com/ltdrdata/ComfyUI-Manager.git
-        cd ComfyUI-Manager
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-    
-    if [ ! -d "ComfyUI-KJNodes" ]; then
-        echo "Installing ComfyUI-KJNodes..."
-        git clone https://github.com/kijai/ComfyUI-KJNodes.git
-        cd ComfyUI-KJNodes
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-    
-    if [ ! -d "Civicomfy" ]; then
-        echo "Installing Civicomfy..."
-        git clone https://github.com/MoonGoblinDev/Civicomfy.git
-        cd Civicomfy
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
+    cd "$COMFYUI_DIR/custom_nodes" || return
+
+    # ComfyUI-Manager now ships with ComfyUI (pip package + --enable-manager).
+    # Disable the old custom_nodes copy from earlier ApexForge versions.
+    if [ -d "ComfyUI-Manager" ]; then
+        echo "Disabling legacy custom_nodes/ComfyUI-Manager (now built into ComfyUI)..."
+        rm -rf "ComfyUI-Manager.disabled"
+        mv "ComfyUI-Manager" "ComfyUI-Manager.disabled"
     fi
 
-    # Install ComfyUI-MMAudio (video-to-audio synthesis)
-    if [ ! -d "ComfyUI-MMAudio" ]; then
-        echo "Installing ComfyUI-MMAudio..."
-        git clone https://github.com/kijai/ComfyUI-MMAudio.git
-        cd ComfyUI-MMAudio
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install ComfyUI-Frame-Interpolation (RIFE video FPS doubling)
-    if [ ! -d "ComfyUI-Frame-Interpolation" ]; then
-        echo "Installing ComfyUI-Frame-Interpolation..."
-        git clone https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git
-        cd ComfyUI-Frame-Interpolation
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install ComfyUI-Chatterbox (TTS + voice cloning - auto-downloads its models)
-    if [ ! -d "ComfyUI-Chatterbox" ]; then
-        echo "Installing ComfyUI-Chatterbox TTS..."
-        git clone https://github.com/wildminder/ComfyUI-Chatterbox.git
-        cd ComfyUI-Chatterbox
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install ComfyUI-GGUF (required for GGUF model loading — InfiniteTalk + Z-Image GGUF workflows)
-    if [ ! -d "ComfyUI-GGUF" ]; then
-        echo "Installing ComfyUI-GGUF..."
-        git clone https://github.com/city96/ComfyUI-GGUF.git
-        cd ComfyUI-GGUF
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install rgthree-comfy (required for Z-Image ControlNet + InfiniteTalk workflows)
-    if [ ! -d "rgthree-comfy" ]; then
-        echo "Installing rgthree-comfy..."
-        git clone https://github.com/rgthree/rgthree-comfy.git
-        cd rgthree-comfy
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install ComfyUI-VideoHelperSuite (required for InfiniteTalk/MultiTalk video handling)
-    if [ ! -d "ComfyUI-VideoHelperSuite" ]; then
-        echo "Installing ComfyUI-VideoHelperSuite..."
-        git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
-        cd ComfyUI-VideoHelperSuite
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install comfyui_controlnet_aux (required for ControlNet preprocessing — Juggernaut + Z-Image ControlNet workflows)
-    if [ ! -d "comfyui_controlnet_aux" ]; then
-        echo "Installing comfyui_controlnet_aux..."
-        git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git
-        cd comfyui_controlnet_aux
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install ComfyUI-facerestore-cf (required for codeformer face restoration workflow)
-    if [ ! -d "facerestore_cf" ]; then
-        echo "Installing facerestore_cf..."
-        git clone https://github.com/mav-rik/facerestore_cf.git
-        cd facerestore_cf
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install ComfyUI-WanVideoWrapper (required for InfiniteTalk + MultiTalk)
-    if [ ! -d "ComfyUI-WanVideoWrapper" ]; then
-        echo "Installing ComfyUI-WanVideoWrapper (Kijai)..."
-        git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git
-        cd ComfyUI-WanVideoWrapper
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
-
-    # Install ACE-Step ComfyUI node (official — for music generation)
-    # NOTE: ACE-Step 1.5 is natively supported in ComfyUI core as of 2026.
-    # The official ace-step/ACE-Step-ComfyUI node adds extra controls (cover,
-    # repaint, remix modes) on top. Model lives in models/checkpoints/ which
-    # matches the official Comfy-Org workflow templates we pull in setup_workflows.
-    if [ ! -d "ACE-Step-ComfyUI" ]; then
-        echo "Installing ACE-Step-ComfyUI (official music generation node)..."
-        git clone https://github.com/ace-step/ACE-Step-ComfyUI.git
-        cd ACE-Step-ComfyUI
-        [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-        cd ..
-    fi
+    local entry name url ref
+    for entry in "${CUSTOM_NODES[@]}"; do
+        IFS='|' read -r name url ref <<< "$entry"
+        echo "--- $name ---"
+        sync_repo "$COMFYUI_DIR/custom_nodes/$name" "$url" "$ref" || continue
+        cd "$COMFYUI_DIR/custom_nodes/$name"
+        # Install dependencies only on first install or when the version changed
+        if [ "$(cat .apexforge_deps 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
+            [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
+            [ -f "install.py" ] && python install.py
+            git rev-parse HEAD > .apexforge_deps
+        fi
+        cd "$COMFYUI_DIR/custom_nodes"
+    done
 }
 
 # Function to download models required by uploaded custom workflows
@@ -984,15 +963,8 @@ download_workflow_models() {
         echo "Z-Image Turbo fp8 KJ already exists."
     fi
 
-    # Qwen3 fp8 mixed text encoder (used by 5b workflow)
-    QWEN_FP8="$COMFYUI_DIR/models/text_encoders/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors"
-    if [ ! -f "$QWEN_FP8" ]; then
-        echo "Downloading Qwen3-4B fp8 mixed text encoder..."
-        wget --progress=bar:force:noscroll -O "$QWEN_FP8" \
-            "https://huggingface.co/silveroxides/Qwen3-4B-ComfyQuants-SingleFiles/resolve/main/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors?download=true"
-    else
-        echo "Qwen3-4B fp8 mixed already exists."
-    fi
+    # The 5b workflow uses the official qwen_3_4b.safetensors text encoder
+    # (downloaded in download_zimage_models)
 
     # -------------------------------------------------------
     # Z-IMAGE GGUF (used by 5c workflow)
@@ -1006,14 +978,35 @@ download_workflow_models() {
         echo "Z-Image Turbo GGUF already exists."
     fi
 
-    # Qwen GGUF text encoder (used by 5c workflow)
-    QWEN_GGUF="$COMFYUI_DIR/models/text_encoders/qwen-4b-zimage-heretic-q8.gguf"
+    # Official Qwen3-4B Q8 GGUF text encoder (used by 5c workflow)
+    QWEN_GGUF="$TEXT_ENCODERS_DIR/Qwen3-4B-Q8_0.gguf"
     if [ ! -f "$QWEN_GGUF" ]; then
-        echo "Downloading Qwen GGUF text encoder (heretic q8)..."
+        echo "Downloading Qwen3-4B Q8 GGUF text encoder (official)..."
         wget --progress=bar:force:noscroll -O "$QWEN_GGUF" \
-            "https://huggingface.co/Lockout/qwen3-4b-heretic-zimage/resolve/main/qwen-4b-zimage-heretic-q8.gguf?download=true"
+            "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q8_0.gguf?download=true"
     else
-        echo "Qwen GGUF text encoder already exists."
+        echo "Qwen3-4B GGUF text encoder already exists."
+    fi
+
+    # Optional uncensored community encoders (APEXFORGE_UNCENSORED_ENCODERS=true).
+    # Select them in the CLIPLoader / CLIPLoaderGGUF node of the Z-Image workflows.
+    if [ "$APEXFORGE_UNCENSORED_ENCODERS" = "true" ]; then
+        QWEN_ABLIT="$TEXT_ENCODERS_DIR/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors"
+        if [ ! -f "$QWEN_ABLIT" ]; then
+            echo "Downloading uncensored Qwen3-4B fp8 text encoder (abliterated)..."
+            wget --progress=bar:force:noscroll -O "$QWEN_ABLIT" \
+                "https://huggingface.co/silveroxides/Qwen3-4B-ComfyQuants-SingleFiles/resolve/main/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors?download=true"
+        else
+            echo "Uncensored Qwen3-4B fp8 already exists."
+        fi
+        QWEN_HERETIC="$TEXT_ENCODERS_DIR/qwen-4b-zimage-heretic-q8.gguf"
+        if [ ! -f "$QWEN_HERETIC" ]; then
+            echo "Downloading uncensored Qwen3-4B GGUF text encoder (heretic q8)..."
+            wget --progress=bar:force:noscroll -O "$QWEN_HERETIC" \
+                "https://huggingface.co/Lockout/qwen3-4b-heretic-zimage/resolve/main/qwen-4b-zimage-heretic-q8.gguf?download=true"
+        else
+            echo "Uncensored Qwen3-4B GGUF already exists."
+        fi
     fi
 
     # -------------------------------------------------------
@@ -1165,35 +1158,11 @@ download_workflow_models() {
     echo "=========================================="
 }
 
-# Function to update custom nodes
-update_custom_nodes() {
-    cd "$COMFYUI_DIR/custom_nodes"
-
-    echo "Checking for custom node updates..."
-    for node_dir in */; do
-        if [ -d "$node_dir" ]; then
-            echo "--- Checking node: $node_dir ---"
-            cd "$node_dir"
-            if [ -d ".git" ]; then
-                git pull || echo "WARNING: Could not update $node_dir."
-            fi
-            [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
-            [ -f "install.py" ] && python install.py
-            cd ..
-        fi
-    done
-    
-    cd "$COMFYUI_DIR"
-}
-
 # Function to start ComfyUI
 start_comfyui() {
     cd "$COMFYUI_DIR"
 
-    echo "Updating custom nodes..."
-    update_custom_nodes
-
-    FIXED_ARGS="--listen 0.0.0.0 --port 8188"
+    FIXED_ARGS="--listen 0.0.0.0 --port 8188 --enable-manager"
     CUSTOM_ARGS=""
 
     if [ -f "$ARGS_FILE" ]; then
@@ -1276,9 +1245,10 @@ install_sageattention() {
         git clone https://github.com/thu-ml/SageAttention.git "$SAGE_DIR"
     fi
 
+    # Build the pinned release, not whatever is on master today
+    git -C "$SAGE_DIR" fetch -q --tags origin 2>/dev/null
+    git -C "$SAGE_DIR" checkout -q "$SAGEATTENTION_REF" || echo "WARNING: Could not check out SageAttention $SAGEATTENTION_REF"
     cd "$SAGE_DIR"
-    # Pull latest in case repo already exists from previous attempt
-    git pull 2>/dev/null || true
 
     # Install with TORCH_CUDA_ARCH_LIST set for sm_120
     TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;12.0" \
@@ -1296,7 +1266,9 @@ install_sageattention() {
 }
 
 echo "=========================================="
-echo "RunPod ComfyUI - RTX 5090 / Blackwell"
+echo "ApexForge v$APEXFORGE_VERSION by Alex Harte"
+echo "Guides & workflows: https://alexanderharte.com"
+echo "ComfyUI $COMFYUI_REF - RTX 5090 / Blackwell"
 echo "CUDA 12.8 + PyTorch 2.10.0 stable + SageAttention"
 echo "=========================================="
 
@@ -1310,6 +1282,7 @@ echo "=========================================="
 wait_for_network
 start_jupyter
 setup_comfyui
+configure_manager
 install_sageattention
 install_custom_nodes
 setup_workflows

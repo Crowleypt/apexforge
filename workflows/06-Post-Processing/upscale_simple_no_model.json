@@ -145,7 +145,7 @@
       "title": "\u26a1 ApexForge \u2014 Upscale \u2014 Simple (No Model, Lanczos)",
       "properties": {},
       "widgets_values": [
-        "# \u26a1 ApexForge \u2014 Upscale \u2014 Simple (No Model, Lanczos)\n\n---\n\n## \ud83d\udfe3 ImageScaleBy\n**Model:** `None \u2014 uses Lanczos algorithm`\n\ud83d\udcc1 **Location:** `ComfyUI/models/N/A`\n> Fast CPU upscale, no model required\n\n---\n## \ud83e\udde9 Required Custom Nodes\n- rgthree-comfy\n\n---\n## \ud83d\udca1 Tips\n- Scale factor 4 = 4x resolution (e.g. 512\u21922048)\n- Lanczos is fast but less detailed than model-based upscaling\n- Use the Image Comparer slider to compare before/after\n\n---\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+        "# \u26a1 ApexForge \u2014 Upscale \u2014 Simple (No Model, Lanczos)\n\n---\n\n## \ud83d\udfe3 ImageScaleBy\n**Model:** `None \u2014 uses Lanczos algorithm`\n\ud83d\udcc1 **Location:** `ComfyUI/models/N/A`\n> Fast CPU upscale, no model required\n\n---\n## \ud83e\udde9 Required Custom Nodes\n- rgthree-comfy\n\n---\n## \ud83d\udca1 Tips\n- Scale factor 4 = 4x resolution (e.g. 512\u21922048)\n- Lanczos is fast but less detailed than model-based upscaling\n- Use the Image Comparer slider to compare before/after\n\n---\n## \ud83d\udcda ApexForge by Alex Harte\n\ud83c\udf10 **Guides & updates:** https://alexanderharte.com\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
       ],
       "color": "#231535",
       "bgcolor": "#3f2460"

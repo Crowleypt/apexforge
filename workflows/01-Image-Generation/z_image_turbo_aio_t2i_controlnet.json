@@ -462,7 +462,7 @@
       "title": "\u26a1 ApexForge \u2014 Z-Image Turbo FP8 AIO \u2014 Text to Image + ControlNet",
       "properties": {},
       "widgets_values": [
-        "# \u26a1 ApexForge \u2014 Z-Image Turbo FP8 AIO \u2014 Text to Image + ControlNet\n\n---\n\n## \ud83d\udfe3 CheckpointLoaderSimple\n**Model:** `z-image-turbo-fp8-aio.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/checkpoints/z-image/`\n\n## \ud83d\udfe3 ModelPatchLoader\n**Model:** `Z-Image-Turbo-Fun-Controlnet-Union.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/model_patches/`\n> ControlNet Union \u2014 supports canny, depth, pose in one model\n\n---\n\n## \ud83e\udde9 Required Custom Nodes\n- rgthree-comfyui\n- comfyui_controlnet_aux\n\n---\n\n## \ud83d\udcda ApexForge\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+        "# \u26a1 ApexForge \u2014 Z-Image Turbo FP8 AIO \u2014 Text to Image + ControlNet\n\n---\n\n## \ud83d\udfe3 CheckpointLoaderSimple\n**Model:** `z-image-turbo-fp8-aio.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/checkpoints/z-image/`\n\n## \ud83d\udfe3 ModelPatchLoader\n**Model:** `Z-Image-Turbo-Fun-Controlnet-Union.safetensors`\n\ud83d\udcc1 **Location:** `ComfyUI/models/model_patches/`\n> ControlNet Union \u2014 supports canny, depth, pose in one model\n\n---\n\n## \ud83e\udde9 Required Custom Nodes\n- rgthree-comfyui\n- comfyui_controlnet_aux\n\n---\n\n## \ud83d\udcda ApexForge by Alex Harte\n\ud83c\udf10 **Guides & updates:** https://alexanderharte.com\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
       ],
       "color": "#231535",
       "bgcolor": "#3f2460"
