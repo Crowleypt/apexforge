@@ -1250,9 +1250,10 @@ install_sageattention() {
     git -C "$SAGE_DIR" checkout -q "$SAGEATTENTION_REF" || echo "WARNING: Could not check out SageAttention $SAGEATTENTION_REF"
     cd "$SAGE_DIR"
 
-    # Install with TORCH_CUDA_ARCH_LIST set for sm_120
+    # Install with TORCH_CUDA_ARCH_LIST set for sm_120. Not editable (-e):
+    # the v2.2.0 build backend does not support editable installs.
     TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;12.0" \
-        pip install --no-cache-dir -e . --no-build-isolation
+        pip install --no-cache-dir . --no-build-isolation
 
     cd /
 
