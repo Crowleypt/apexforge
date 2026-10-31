@@ -26,6 +26,11 @@ APEXFORGE_UNCENSORED_ENCODERS="${APEXFORGE_UNCENSORED_ENCODERS:-false}"
 # this release. Set APEXFORGE_TRACK_LATEST=true to pull the newest code instead
 # (untested — things may break).
 APEXFORGE_TRACK_LATEST="${APEXFORGE_TRACK_LATEST:-false}"
+# Python packages live on the container disk, which is wiped when the pod
+# stops, so the "dependencies installed" markers must live there too (not on
+# the network volume).
+DEPS_MARKERS="/root/.apexforge_deps"
+mkdir -p "$DEPS_MARKERS"
 COMFYUI_REF="v0.43.0"
 SAGEATTENTION_REF="v2.2.0"
 # dir|repo|commit
@@ -109,11 +114,11 @@ setup_comfyui() {
     fi
     sync_repo "$COMFYUI_DIR" https://github.com/Comfy-Org/ComfyUI.git "$COMFYUI_REF"
     cd "$COMFYUI_DIR" || return
-    # Reinstall dependencies only when the ComfyUI version changed
-    if [ "$(cat .apexforge_deps 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
+    # Install dependencies once per container, and again if the ComfyUI version changes
+    if [ "$(cat "$DEPS_MARKERS/ComfyUI" 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
         echo "Installing ComfyUI + ComfyUI-Manager dependencies..."
         pip install --no-cache-dir -r requirements.txt -r manager_requirements.txt \
-            && git rev-parse HEAD > .apexforge_deps \
+            && git rev-parse HEAD > "$DEPS_MARKERS/ComfyUI" \
             || echo "WARNING: Could not install core dependencies."
     fi
     cd "$COMFYUI_DIR"
@@ -920,11 +925,11 @@ install_custom_nodes() {
         echo "--- $name ---"
         sync_repo "$COMFYUI_DIR/custom_nodes/$name" "$url" "$ref" || continue
         cd "$COMFYUI_DIR/custom_nodes/$name"
-        # Install dependencies only on first install or when the version changed
-        if [ "$(cat .apexforge_deps 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
+        # Install dependencies once per container, and again if the version changes
+        if [ "$(cat "$DEPS_MARKERS/$name" 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
             [ -f "requirements.txt" ] && pip install --no-cache-dir -r requirements.txt
             [ -f "install.py" ] && python install.py
-            git rev-parse HEAD > .apexforge_deps
+            git rev-parse HEAD > "$DEPS_MARKERS/$name"
         fi
         cd "$COMFYUI_DIR/custom_nodes"
     done
