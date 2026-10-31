@@ -1203,7 +1203,7 @@ start_comfyui() {
     echo "Starting ComfyUI on port 8188"
     echo "PyTorch: $(python -c 'import torch; print(torch.__version__)')"
     echo "SageAttention: $(python -c 'import sageattention; print(sageattention.__version__)' 2>/dev/null || echo 'not found')"
-    echo "sm_120 support: $(python -c 'import torch; print(str(\"sm_120\" in torch.cuda.get_arch_list()))')"
+    echo "sm_120 support: $(python -c 'import torch; print("sm_120" in torch.cuda.get_arch_list())')"
     echo "=========================================="
 
     python main.py $FIXED_ARGS $CUSTOM_ARGS 2>&1 | tee /comfyui/comfyui.log
@@ -1256,9 +1256,22 @@ install_sageattention() {
     git -C "$SAGE_DIR" checkout -q "$SAGEATTENTION_REF" || echo "WARNING: Could not check out SageAttention $SAGEATTENTION_REF"
     cd "$SAGE_DIR"
 
-    # Install with TORCH_CUDA_ARCH_LIST set for sm_120. Not editable (-e):
-    # the v2.2.0 build backend does not support editable installs.
-    TORCH_CUDA_ARCH_LIST="8.0;8.6;8.9;9.0;12.0" \
+    # Build only for the GPU in this pod. v2.2.0's setup.py applies every
+    # listed arch to every kernel, so a list with 9.0 plus any other arch
+    # compiles the Hopper-only (wgmma) kernel for that arch and ptxas fails.
+    # The package lives on the container disk and is rebuilt per container,
+    # so building for the current GPU is always correct.
+    # Not editable (-e): the v2.2.0 build backend has no editable support.
+    # ninja is required, not just faster: without it torch falls back to its
+    # distutils backend, which swaps a shared compiler between nvcc and g++
+    # per file. SageAttention builds its extensions on parallel threads, so
+    # a .cpp file can be handed to nvcc ("nvcc fatal: Unknown option '-fopenmp'").
+    pip install --no-cache-dir ninja
+
+    SAGE_ARCH=$(nvidia-smi --query-gpu=compute_cap --format=csv,noheader 2>/dev/null | head -1 | tr -d ' ')
+    SAGE_ARCH=${SAGE_ARCH:-12.0}
+    echo "Building SageAttention for compute capability $SAGE_ARCH"
+    TORCH_CUDA_ARCH_LIST="$SAGE_ARCH" \
         pip install --no-cache-dir . --no-build-isolation
 
     cd /
