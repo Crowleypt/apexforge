@@ -138,6 +138,35 @@ configure_manager() {
     fi
 }
 
+# Download to <file>.part and rename only on success. A plain wget -O leaves
+# a broken file behind when a download fails (e.g. a 29-byte error page),
+# and the "[ ! -f ]" checks would then skip it on every later boot.
+# Usage: download -O <file> <url>
+download() {
+    local out="" url="" arg
+    while [ $# -gt 0 ]; do
+        arg="$1"; shift
+        if [ "$arg" = "-O" ]; then out="$1"; shift; else url="$arg"; fi
+    done
+    if wget --progress=bar:force:noscroll -O "$out.part" "$url"; then
+        mv "$out.part" "$out"
+    else
+        rm -f "$out.part"
+        echo "WARNING: download failed, will retry next boot: $url"
+    fi
+}
+
+# Remove model files left broken by failed downloads in earlier versions.
+# Real models are far larger than 64 KB; embeddings are skipped (they can be tiny).
+remove_broken_downloads() {
+    find "$COMFYUI_DIR/models" -path "$COMFYUI_DIR/models/embeddings" -prune -o -type f \
+        \( -name "*.safetensors" -o -name "*.gguf" -o -name "*.pth" -o -name "*.ckpt" -o -name "*.pt" -o -name "*.bin" \) \
+        -size -64k -print 2>/dev/null | while read -r f; do
+        echo "Removing broken download: $f"
+        rm -f "$f"
+    done
+}
+
 # Function to download Juggernaut Reborn model (SD 1.5)
 download_model() {
     echo "=========================================="
@@ -150,7 +179,7 @@ download_model() {
     MODEL_PATH="$CHECKPOINTS_DIR/sd15/juggernaut_reborn.safetensors"
     if [ ! -f "$MODEL_PATH" ]; then
         echo "Downloading Juggernaut Reborn model (~2 GB) from HuggingFace..."
-        wget --progress=bar:force:noscroll -O "$MODEL_PATH" \
+        download -O "$MODEL_PATH" \
             "https://huggingface.co/HyperX-Sentience/Juggernaut-Reborn/resolve/main/juggernaut_reborn.safetensors?download=true"
 
         if [ -f "$MODEL_PATH" ]; then
@@ -187,7 +216,7 @@ download_talking_models() {
     WAN_I2V="$DIFFUSION_MODELS_DIR/wan2.1_i2v_480p_14B_fp16.safetensors"
     if [ ! -f "$WAN_I2V" ]; then
         echo "Downloading Wan2.1 I2V 14B 480p (32.8 GB)..."
-        wget --progress=bar:force:noscroll -O "$WAN_I2V" \
+        download -O "$WAN_I2V" \
             "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/diffusion_models/wan2.1_i2v_480p_14B_fp16.safetensors?download=true"
     else
         echo "Wan2.1 I2V 14B 480p already exists."
@@ -197,7 +226,7 @@ download_talking_models() {
     INFINITETALK_SINGLE="$DIFFUSION_MODELS_DIR/InfiniteTalk/infinitetalk_single.safetensors"
     if [ ! -f "$INFINITETALK_SINGLE" ]; then
         echo "Downloading InfiniteTalk Single..."
-        wget --progress=bar:force:noscroll -O "$INFINITETALK_SINGLE" \
+        download -O "$INFINITETALK_SINGLE" \
             "https://huggingface.co/MeiGen-AI/InfiniteTalk/resolve/main/comfyui/infinitetalk_single.safetensors?download=true"
     else
         echo "InfiniteTalk Single already exists."
@@ -207,7 +236,7 @@ download_talking_models() {
     INFINITETALK_MULTI="$DIFFUSION_MODELS_DIR/InfiniteTalk/infinitetalk_multi.safetensors"
     if [ ! -f "$INFINITETALK_MULTI" ]; then
         echo "Downloading InfiniteTalk Multi..."
-        wget --progress=bar:force:noscroll -O "$INFINITETALK_MULTI" \
+        download -O "$INFINITETALK_MULTI" \
             "https://huggingface.co/MeiGen-AI/InfiniteTalk/resolve/main/comfyui/infinitetalk_multi.safetensors?download=true"
     else
         echo "InfiniteTalk Multi already exists."
@@ -217,7 +246,7 @@ download_talking_models() {
     MULTITALK="$DIFFUSION_MODELS_DIR/multitalk.safetensors"
     if [ ! -f "$MULTITALK" ]; then
         echo "Downloading MultiTalk model (9.95 GB)..."
-        wget --progress=bar:force:noscroll -O "$MULTITALK" \
+        download -O "$MULTITALK" \
             "https://huggingface.co/MeiGen-AI/MeiGen-MultiTalk/resolve/main/multitalk.safetensors?download=true"
     else
         echo "MultiTalk model already exists."
@@ -227,7 +256,7 @@ download_talking_models() {
     LIGHTX2V="$COMFYUI_DIR/models/loras/Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors"
     if [ ! -f "$LIGHTX2V" ]; then
         echo "Downloading LightX2V I2V LoRA rank64 (738 MB)..."
-        wget --progress=bar:force:noscroll -O "$LIGHTX2V" \
+        download -O "$LIGHTX2V" \
             "https://huggingface.co/Kijai/WanVideo_comfy/resolve/main/Lightx2v/lightx2v_I2V_14B_480p_cfg_step_distill_rank64_bf16.safetensors?download=true"
     else
         echo "LightX2V LoRA already exists."
@@ -237,7 +266,7 @@ download_talking_models() {
     UMT5="$COMFYUI_DIR/models/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors"
     if [ ! -f "$UMT5" ]; then
         echo "Downloading UMT5 XXL text encoder..."
-        wget --progress=bar:force:noscroll -O "$UMT5" \
+        download -O "$UMT5" \
             "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors?download=true"
     else
         echo "UMT5 text encoder already exists."
@@ -247,7 +276,7 @@ download_talking_models() {
     WAN_VAE="$COMFYUI_DIR/models/vae/wan_2.1_vae.safetensors"
     if [ ! -f "$WAN_VAE" ]; then
         echo "Downloading Wan 2.1 VAE..."
-        wget --progress=bar:force:noscroll -O "$WAN_VAE" \
+        download -O "$WAN_VAE" \
             "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors?download=true"
     else
         echo "Wan 2.1 VAE already exists."
@@ -257,7 +286,7 @@ download_talking_models() {
     CLIP_VISION="$COMFYUI_DIR/models/clip_vision/clip_vision_h.safetensors"
     if [ ! -f "$CLIP_VISION" ]; then
         echo "Downloading CLIP Vision H..."
-        wget --progress=bar:force:noscroll -O "$CLIP_VISION" \
+        download -O "$CLIP_VISION" \
             "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/clip_vision/clip_vision_h.safetensors?download=true"
     else
         echo "CLIP Vision H already exists."
@@ -305,7 +334,7 @@ download_utility_models() {
     CLIP_L="$COMFYUI_DIR/models/text_encoders/clip_l.safetensors"
     if [ ! -f "$CLIP_L" ]; then
         echo "Downloading FLUX clip_l text encoder..."
-        wget --progress=bar:force:noscroll -O "$CLIP_L" \
+        download -O "$CLIP_L" \
             "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/clip_l.safetensors?download=true"
     else
         echo "clip_l already exists."
@@ -315,7 +344,7 @@ download_utility_models() {
     T5XXL="$COMFYUI_DIR/models/text_encoders/t5xxl_fp8_e4m3fn_scaled.safetensors"
     if [ ! -f "$T5XXL" ]; then
         echo "Downloading FLUX t5xxl fp8 text encoder (~4.6 GB)..."
-        wget --progress=bar:force:noscroll -O "$T5XXL" \
+        download -O "$T5XXL" \
             "https://huggingface.co/comfyanonymous/flux_text_encoders/resolve/main/t5xxl_fp8_e4m3fn_scaled.safetensors?download=true"
     else
         echo "t5xxl fp8 already exists."
@@ -327,7 +356,7 @@ download_utility_models() {
     FLUX_DEV="$DIFFUSION_MODELS_DIR/flux1-dev-fp8.safetensors"
     if [ ! -f "$FLUX_DEV" ]; then
         echo "Downloading FLUX.1 Dev fp8 (~12 GB)..."
-        wget --progress=bar:force:noscroll -O "$FLUX_DEV" \
+        download -O "$FLUX_DEV" \
             "https://huggingface.co/Comfy-Org/flux1-dev/resolve/main/flux1-dev-fp8.safetensors?download=true"
     else
         echo "FLUX.1 Dev already exists."
@@ -340,7 +369,7 @@ download_utility_models() {
     FLUX_KONTEXT="$DIFFUSION_MODELS_DIR/flux1-dev-kontext_fp8_scaled.safetensors"
     if [ ! -f "$FLUX_KONTEXT" ]; then
         echo "Downloading FLUX.1 Kontext Dev fp8 (~12 GB)..."
-        wget --progress=bar:force:noscroll -O "$FLUX_KONTEXT" \
+        download -O "$FLUX_KONTEXT" \
             "https://huggingface.co/Comfy-Org/flux1-kontext-dev_ComfyUI/resolve/main/split_files/diffusion_models/flux1-dev-kontext_fp8_scaled.safetensors?download=true"
     else
         echo "FLUX.1 Kontext Dev already exists."
@@ -354,7 +383,7 @@ download_utility_models() {
     ULTRASHARP="$COMFYUI_DIR/models/upscale_models/4x-UltraSharp.pth"
     if [ ! -f "$ULTRASHARP" ]; then
         echo "Downloading 4x-UltraSharp upscaler..."
-        wget --progress=bar:force:noscroll -O "$ULTRASHARP" \
+        download -O "$ULTRASHARP" \
             "https://huggingface.co/philz1337x/upscaler/resolve/main/4x-UltraSharp.pth?download=true"
     else
         echo "4x-UltraSharp already exists."
@@ -364,7 +393,7 @@ download_utility_models() {
     REALESRGAN="$COMFYUI_DIR/models/upscale_models/RealESRGAN_x4plus.pth"
     if [ ! -f "$REALESRGAN" ]; then
         echo "Downloading RealESRGAN x4plus upscaler..."
-        wget --progress=bar:force:noscroll -O "$REALESRGAN" \
+        download -O "$REALESRGAN" \
             "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth"
     else
         echo "RealESRGAN_x4plus already exists."
@@ -374,7 +403,7 @@ download_utility_models() {
     NMKD="$COMFYUI_DIR/models/upscale_models/4x_NMKD-Siax_200k.pth"
     if [ ! -f "$NMKD" ]; then
         echo "Downloading 4x NMKD-Siax upscaler..."
-        wget --progress=bar:force:noscroll -O "$NMKD" \
+        download -O "$NMKD" \
             "https://huggingface.co/uwg/upscaler/resolve/main/ESRGAN/4x_NMKD-Siax_200k.pth?download=true"
     else
         echo "4x NMKD-Siax already exists."
@@ -388,7 +417,7 @@ download_utility_models() {
     CODEFORMER="$COMFYUI_DIR/models/facerestore_models/codeformer.pth"
     if [ ! -f "$CODEFORMER" ]; then
         echo "Downloading CodeFormer face restore model..."
-        wget --progress=bar:force:noscroll -O "$CODEFORMER" \
+        download -O "$CODEFORMER" \
             "https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth"
     else
         echo "CodeFormer already exists."
@@ -398,7 +427,7 @@ download_utility_models() {
     GFPGAN="$COMFYUI_DIR/models/facerestore_models/GFPGANv1.4.pth"
     if [ ! -f "$GFPGAN" ]; then
         echo "Downloading GFPGAN v1.4 face restore model..."
-        wget --progress=bar:force:noscroll -O "$GFPGAN" \
+        download -O "$GFPGAN" \
             "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.4/GFPGANv1.4.pth"
     else
         echo "GFPGANv1.4 already exists."
@@ -559,7 +588,7 @@ download_audio_and_video_utils() {
     ACE_STEP_15="$COMFYUI_DIR/models/checkpoints/ace_step_1.5_turbo_aio.safetensors"
     if [ ! -f "$ACE_STEP_15" ]; then
         echo "Downloading ACE-Step 1.5 Turbo AIO music generation model (~7.7 GB)..."
-        wget --progress=bar:force:noscroll -O "$ACE_STEP_15" \
+        download -O "$ACE_STEP_15" \
             "https://huggingface.co/Comfy-Org/ace_step_1.5_ComfyUI_files/resolve/main/checkpoints/ace_step_1.5_turbo_aio.safetensors?download=true"
     else
         echo "ACE-Step 1.5 Turbo already exists."
@@ -569,8 +598,8 @@ download_audio_and_video_utils() {
     ACE_STEP_V1="$COMFYUI_DIR/models/checkpoints/ace_step_v1_3.5b.safetensors"
     if [ ! -f "$ACE_STEP_V1" ]; then
         echo "Downloading ACE-Step v1 3.5B music generation model (~7 GB)..."
-        wget --progress=bar:force:noscroll -O "$ACE_STEP_V1" \
-            "https://huggingface.co/ACE-Step/ACE-Step/resolve/main/ace_step_v1_3.5b.safetensors?download=true"
+        download -O "$ACE_STEP_V1" \
+            "https://huggingface.co/Comfy-Org/ACE-Step_ComfyUI_repackaged/resolve/main/all_in_one/ace_step_v1_3.5b.safetensors?download=true"
     else
         echo "ACE-Step v1 3.5B already exists."
     fi
@@ -583,7 +612,7 @@ download_audio_and_video_utils() {
     MMAUDIO_MAIN="$COMFYUI_DIR/models/mmaudio/mmaudio_large_44k_v2_fp16.safetensors"
     if [ ! -f "$MMAUDIO_MAIN" ]; then
         echo "Downloading MMAudio large 44k v2 fp16..."
-        wget --progress=bar:force:noscroll -O "$MMAUDIO_MAIN" \
+        download -O "$MMAUDIO_MAIN" \
             "https://huggingface.co/Kijai/MMAudio_safetensors/resolve/main/mmaudio_large_44k_v2_fp16.safetensors?download=true"
     else
         echo "MMAudio main model already exists."
@@ -592,7 +621,7 @@ download_audio_and_video_utils() {
     MMAUDIO_SYNCH="$COMFYUI_DIR/models/mmaudio/mmaudio_synchformer_fp16.safetensors"
     if [ ! -f "$MMAUDIO_SYNCH" ]; then
         echo "Downloading MMAudio synchformer fp16..."
-        wget --progress=bar:force:noscroll -O "$MMAUDIO_SYNCH" \
+        download -O "$MMAUDIO_SYNCH" \
             "https://huggingface.co/Kijai/MMAudio_safetensors/resolve/main/mmaudio_synchformer_fp16.safetensors?download=true"
     else
         echo "MMAudio synchformer already exists."
@@ -601,7 +630,7 @@ download_audio_and_video_utils() {
     MMAUDIO_VAE="$COMFYUI_DIR/models/mmaudio/mmaudio_vae_44k_fp16.safetensors"
     if [ ! -f "$MMAUDIO_VAE" ]; then
         echo "Downloading MMAudio VAE fp16..."
-        wget --progress=bar:force:noscroll -O "$MMAUDIO_VAE" \
+        download -O "$MMAUDIO_VAE" \
             "https://huggingface.co/Kijai/MMAudio_safetensors/resolve/main/mmaudio_vae_44k_fp16.safetensors?download=true"
     else
         echo "MMAudio VAE already exists."
@@ -610,7 +639,7 @@ download_audio_and_video_utils() {
     MMAUDIO_CLIP="$COMFYUI_DIR/models/mmaudio/apple_DFN5B-CLIP-ViT-H-14-384_fp16.safetensors"
     if [ ! -f "$MMAUDIO_CLIP" ]; then
         echo "Downloading MMAudio Apple CLIP fp16..."
-        wget --progress=bar:force:noscroll -O "$MMAUDIO_CLIP" \
+        download -O "$MMAUDIO_CLIP" \
             "https://huggingface.co/Kijai/MMAudio_safetensors/resolve/main/apple_DFN5B-CLIP-ViT-H-14-384_fp16.safetensors?download=true"
     else
         echo "MMAudio CLIP already exists."
@@ -623,7 +652,7 @@ download_audio_and_video_utils() {
     RIFE="$COMFYUI_DIR/models/frame_interpolation/rife_v4.26.safetensors"
     if [ ! -f "$RIFE" ]; then
         echo "Downloading RIFE v4.26 frame interpolation (22 MB)..."
-        wget --progress=bar:force:noscroll -O "$RIFE" \
+        download -O "$RIFE" \
             "https://huggingface.co/Comfy-Org/frame_interpolation/resolve/main/frame_interpolation/rife_v4.26.safetensors?download=true"
     else
         echo "RIFE v4.26 already exists."
@@ -652,7 +681,7 @@ download_flux_loras() {
     XLABS_REALISM="$FLUX_LORA_DIR/xlabs_flux_realism_lora.safetensors"
     if [ ! -f "$XLABS_REALISM" ]; then
         echo "Downloading XLabs Flux Realism LoRA..."
-        wget --progress=bar:force:noscroll -O "$XLABS_REALISM" \
+        download -O "$XLABS_REALISM" \
             "https://huggingface.co/XLabs-AI/flux-RealismLora/resolve/main/lora.safetensors?download=true"
     else
         echo "XLabs Realism LoRA already exists."
@@ -662,7 +691,7 @@ download_flux_loras() {
     ADD_DETAILS="$FLUX_LORA_DIR/flux_dev_add_details.safetensors"
     if [ ! -f "$ADD_DETAILS" ]; then
         echo "Downloading Flux Add Details LoRA (natural skin, realism)..."
-        wget --progress=bar:force:noscroll -O "$ADD_DETAILS" \
+        download -O "$ADD_DETAILS" \
             "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-add-details/resolve/main/FLUX-dev-lora-add_details.safetensors?download=true"
     else
         echo "Flux Add Details LoRA already exists."
@@ -672,7 +701,7 @@ download_flux_loras() {
     ANTI_BLUR="$FLUX_LORA_DIR/flux_dev_anti_blur.safetensors"
     if [ ! -f "$ANTI_BLUR" ]; then
         echo "Downloading Flux AntiBlur LoRA (sharpness, DoF)..."
-        wget --progress=bar:force:noscroll -O "$ANTI_BLUR" \
+        download -O "$ANTI_BLUR" \
             "https://huggingface.co/Shakker-Labs/FLUX.1-dev-LoRA-AntiBlur/resolve/main/FLUX-dev-lora-AntiBlur.safetensors?download=true"
     else
         echo "Flux AntiBlur LoRA already exists."
@@ -682,7 +711,7 @@ download_flux_loras() {
     FLUX_TURBO="$FLUX_LORA_DIR/flux_turbo_alpha.safetensors"
     if [ ! -f "$FLUX_TURBO" ]; then
         echo "Downloading Flux Turbo Alpha LoRA (8-step speed)..."
-        wget --progress=bar:force:noscroll -O "$FLUX_TURBO" \
+        download -O "$FLUX_TURBO" \
             "https://huggingface.co/alimama-creative/FLUX.1-Turbo-Alpha/resolve/main/diffusion_pytorch_model.safetensors?download=true"
     else
         echo "Flux Turbo Alpha LoRA already exists."
@@ -692,7 +721,7 @@ download_flux_loras() {
     HYPER_SD="$FLUX_LORA_DIR/hyper_flux_dev_8step.safetensors"
     if [ ! -f "$HYPER_SD" ]; then
         echo "Downloading ByteDance Hyper-SD 8-step LoRA..."
-        wget --progress=bar:force:noscroll -O "$HYPER_SD" \
+        download -O "$HYPER_SD" \
             "https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-FLUX.1-dev-8steps-lora.safetensors?download=true"
     else
         echo "Hyper-SD 8-step LoRA already exists."
@@ -722,7 +751,7 @@ download_zimage_loras() {
     DISTILL_4="$LORA_DIR/Z-Image-Fun-Lora-Distill-4-Steps-2603.safetensors"
     if [ ! -f "$DISTILL_4" ]; then
         echo "Downloading Z-Image Distill 4-step LoRA..."
-        wget --progress=bar:force:noscroll -O "$DISTILL_4" \
+        download -O "$DISTILL_4" \
             "https://huggingface.co/alibaba-pai/Z-Image-Fun-Lora-Distill/resolve/main/Z-Image-Fun-Lora-Distill-4-Steps-2603.safetensors?download=true"
     else
         echo "Z-Image Distill 4-step already exists."
@@ -732,7 +761,7 @@ download_zimage_loras() {
     DISTILL_8="$LORA_DIR/Z-Image-Fun-Lora-Distill-8-Steps-2603.safetensors"
     if [ ! -f "$DISTILL_8" ]; then
         echo "Downloading Z-Image Distill 8-step LoRA..."
-        wget --progress=bar:force:noscroll -O "$DISTILL_8" \
+        download -O "$DISTILL_8" \
             "https://huggingface.co/alibaba-pai/Z-Image-Fun-Lora-Distill/resolve/main/Z-Image-Fun-Lora-Distill-8-Steps-2603.safetensors?download=true"
     else
         echo "Z-Image Distill 8-step already exists."
@@ -742,7 +771,7 @@ download_zimage_loras() {
     FLOW_DPO="$LORA_DIR/zit_fdpo_v1.safetensors"
     if [ ! -f "$FLOW_DPO" ]; then
         echo "Downloading Z-Image Flow-DPO LoRA (lighting & realism)..."
-        wget --progress=bar:force:noscroll -O "$FLOW_DPO" \
+        download -O "$FLOW_DPO" \
             "https://huggingface.co/F16/z-image-turbo-flow-dpo/resolve/main/zit_fdpo_v1.safetensors?download=true"
     else
         echo "Z-Image Flow-DPO already exists."
@@ -752,7 +781,7 @@ download_zimage_loras() {
     SDA="$LORA_DIR/zit_sda_v1.safetensors"
     if [ ! -f "$SDA" ]; then
         echo "Downloading Z-Image SDA LoRA (output diversity)..."
-        wget --progress=bar:force:noscroll -O "$SDA" \
+        download -O "$SDA" \
             "https://huggingface.co/F16/z-image-turbo-sda/resolve/main/zit_sda_v1.safetensors?download=true"
     else
         echo "Z-Image SDA already exists."
@@ -796,7 +825,7 @@ download_wan22_models() {
     WAN22_I2V_HIGH="$DIFFUSION_MODELS_DIR/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"
     if [ ! -f "$WAN22_I2V_HIGH" ]; then
         echo "Downloading Wan2.2 I2V high noise fp8 (~14.3 GB)..."
-        wget --progress=bar:force:noscroll -O "$WAN22_I2V_HIGH" \
+        download -O "$WAN22_I2V_HIGH" \
             "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors?download=true"
     else
         echo "Wan2.2 I2V high noise already exists."
@@ -806,7 +835,7 @@ download_wan22_models() {
     WAN22_I2V_LOW="$DIFFUSION_MODELS_DIR/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"
     if [ ! -f "$WAN22_I2V_LOW" ]; then
         echo "Downloading Wan2.2 I2V low noise fp8 (~14.3 GB)..."
-        wget --progress=bar:force:noscroll -O "$WAN22_I2V_LOW" \
+        download -O "$WAN22_I2V_LOW" \
             "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors?download=true"
     else
         echo "Wan2.2 I2V low noise already exists."
@@ -816,7 +845,7 @@ download_wan22_models() {
     WAN22_T2V_HIGH="$DIFFUSION_MODELS_DIR/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors"
     if [ ! -f "$WAN22_T2V_HIGH" ]; then
         echo "Downloading Wan2.2 T2V high noise fp8 (~14.3 GB)..."
-        wget --progress=bar:force:noscroll -O "$WAN22_T2V_HIGH" \
+        download -O "$WAN22_T2V_HIGH" \
             "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors?download=true"
     else
         echo "Wan2.2 T2V high noise already exists."
@@ -826,7 +855,7 @@ download_wan22_models() {
     WAN22_T2V_LOW="$DIFFUSION_MODELS_DIR/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"
     if [ ! -f "$WAN22_T2V_LOW" ]; then
         echo "Downloading Wan2.2 T2V low noise fp8 (~14.3 GB)..."
-        wget --progress=bar:force:noscroll -O "$WAN22_T2V_LOW" \
+        download -O "$WAN22_T2V_LOW" \
             "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors?download=true"
     else
         echo "Wan2.2 T2V low noise already exists."
@@ -836,7 +865,7 @@ download_wan22_models() {
     WAN22_VAE="$COMFYUI_DIR/models/vae/wan2.2_vae.safetensors"
     if [ ! -f "$WAN22_VAE" ]; then
         echo "Downloading Wan2.2 VAE (1.41 GB)..."
-        wget --progress=bar:force:noscroll -O "$WAN22_VAE" \
+        download -O "$WAN22_VAE" \
             "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors?download=true"
     else
         echo "Wan2.2 VAE already exists."
@@ -863,7 +892,7 @@ download_zimage_models() {
     ZIMAGE_TURBO_PATH="$DIFFUSION_MODELS_DIR/z_image_turbo_bf16.safetensors"
     if [ ! -f "$ZIMAGE_TURBO_PATH" ]; then
         echo "Downloading Z-Image Turbo bf16..."
-        wget --progress=bar:force:noscroll \
+        download \
             -O "$ZIMAGE_TURBO_PATH" \
             "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors?download=true"
     else
@@ -874,7 +903,7 @@ download_zimage_models() {
     ZIMAGE_DIFFUSION_PATH="$DIFFUSION_MODELS_DIR/z_image_bf16.safetensors"
     if [ ! -f "$ZIMAGE_DIFFUSION_PATH" ]; then
         echo "Downloading z-image Base bf16 diffusion model..."
-        wget --progress=bar:force:noscroll \
+        download \
             -O "$ZIMAGE_DIFFUSION_PATH" \
             "https://huggingface.co/Comfy-Org/z_image/resolve/main/split_files/diffusion_models/z_image_bf16.safetensors?download=true"
     else
@@ -884,7 +913,7 @@ download_zimage_models() {
     ZIMAGE_TEXT_ENCODER_PATH="$TEXT_ENCODERS_DIR/qwen_3_4b.safetensors"
     if [ ! -f "$ZIMAGE_TEXT_ENCODER_PATH" ]; then
         echo "Downloading z-image text encoder (Qwen 3 4B)..."
-        wget --progress=bar:force:noscroll \
+        download \
             -O "$ZIMAGE_TEXT_ENCODER_PATH" \
             "https://huggingface.co/Comfy-Org/z_image/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors?download=true"
     else
@@ -894,7 +923,7 @@ download_zimage_models() {
     ZIMAGE_VAE_PATH="$VAE_DIR/ae.safetensors"
     if [ ! -f "$ZIMAGE_VAE_PATH" ]; then
         echo "Downloading z-image VAE..."
-        wget --progress=bar:force:noscroll \
+        download \
             -O "$ZIMAGE_VAE_PATH" \
             "https://huggingface.co/Comfy-Org/z_image/resolve/main/split_files/vae/ae.safetensors?download=true"
     else
@@ -919,6 +948,9 @@ install_custom_nodes() {
         mv "ComfyUI-Manager" "ComfyUI-Manager.disabled"
     fi
 
+    # Undo the local wav2vec2 patch so syncing the node never conflicts
+    git -C "$COMFYUI_DIR/custom_nodes/ComfyUI-WanVideoWrapper" checkout -- multitalk/wav2vec2.py 2>/dev/null
+
     local entry name url ref
     for entry in "${CUSTOM_NODES[@]}"; do
         IFS='|' read -r name url ref <<< "$entry"
@@ -933,6 +965,65 @@ install_custom_nodes() {
         fi
         cd "$COMFYUI_DIR/custom_nodes"
     done
+
+    patch_wanvideo_wav2vec2
+}
+
+# InfiniteTalk / MultiTalk fail on transformers v5 with "'NoneType' object is
+# not subscriptable": the v5 Wav2Vec2Encoder ignores output_hidden_states, so
+# MultiTalkWav2VecEmbeds gets hidden_states=None
+# (https://github.com/kijai/ComfyUI-WanVideoWrapper/issues/2052).
+# Collect the per-layer states with forward hooks instead, which works on
+# transformers v4 and v5. Skipped if upstream changes the file.
+patch_wanvideo_wav2vec2() {
+    local target="$COMFYUI_DIR/custom_nodes/ComfyUI-WanVideoWrapper/multitalk/wav2vec2.py"
+    [ -f "$target" ] || return
+    python - "$target" <<'PYEOF'
+import sys
+path = sys.argv[1]
+src = open(path).read()
+if "_apexforge_encode" in src:
+    sys.exit(0)
+call = """        encoder_outputs = self.encoder(
+            hidden_states,
+            attention_mask=attention_mask,
+            output_attentions=output_attentions,
+            output_hidden_states=output_hidden_states,
+            return_dict=return_dict,
+        )
+"""
+anchor = "from transformers.modeling_outputs import BaseModelOutput\n"
+if src.count(call) != 2 or anchor not in src:
+    print("WARNING: WanVideoWrapper wav2vec2.py changed upstream, ApexForge patch not applied")
+    sys.exit(0)
+helper = '''
+# ApexForge patch (WanVideoWrapper#2052): transformers v5 ignores
+# output_hidden_states in Wav2Vec2Encoder, so collect them with hooks.
+def _apexforge_encode(encoder, hidden_states, attention_mask, output_attentions, output_hidden_states):
+    if not output_hidden_states:
+        return encoder(hidden_states, attention_mask=attention_mask,
+                       output_attentions=output_attentions, return_dict=True)
+    collected = []
+    def before_first(module, args, kwargs):
+        collected.append(args[0] if args else kwargs["hidden_states"])
+    def after_each(module, args, output):
+        collected.append(output[0] if isinstance(output, (tuple, list)) else output)
+    hooks = [encoder.layers[0].register_forward_pre_hook(before_first, with_kwargs=True)]
+    hooks += [layer.register_forward_hook(after_each) for layer in encoder.layers]
+    try:
+        out = encoder(hidden_states, attention_mask=attention_mask,
+                      output_attentions=output_attentions, return_dict=True)
+    finally:
+        for h in hooks:
+            h.remove()
+    return BaseModelOutput(last_hidden_state=out[0], hidden_states=tuple(collected),
+                           attentions=getattr(out, "attentions", None))
+'''
+src = src.replace(anchor, anchor + helper, 1)
+src = src.replace(call, "        encoder_outputs = _apexforge_encode(self.encoder, hidden_states, attention_mask, output_attentions, output_hidden_states)\n")
+open(path, "w").write(src)
+print("Applied ApexForge wav2vec2 hidden_states patch (WanVideoWrapper#2052)")
+PYEOF
 }
 
 # Function to download models required by uploaded custom workflows
@@ -950,7 +1041,7 @@ download_workflow_models() {
     ZIMAGE_AIO="$CHECKPOINTS_DIR/z-image/z-image-turbo-fp8-aio.safetensors"
     if [ ! -f "$ZIMAGE_AIO" ]; then
         echo "Downloading Z-Image Turbo FP8 AIO checkpoint (~10 GB)..."
-        wget --progress=bar:force:noscroll -O "$ZIMAGE_AIO" \
+        download -O "$ZIMAGE_AIO" \
             "https://huggingface.co/SeeSee21/Z-Image-Turbo-AIO/resolve/main/z-image-turbo-fp8-aio.safetensors?download=true"
     else
         echo "Z-Image Turbo AIO checkpoint already exists."
@@ -963,7 +1054,7 @@ download_workflow_models() {
     ZIMAGE_KJ="$DIFFUSION_MODELS_DIR/z-image/z-image-turbo_fp8_scaled_e5m2_KJ.safetensors"
     if [ ! -f "$ZIMAGE_KJ" ]; then
         echo "Downloading Z-Image Turbo fp8 scaled (Kijai variant, ~6 GB)..."
-        wget --progress=bar:force:noscroll -O "$ZIMAGE_KJ" \
+        download -O "$ZIMAGE_KJ" \
             "https://huggingface.co/Kijai/Z-Image_comfy_fp8_scaled/resolve/main/z-image-turbo_fp8_scaled_e5m2_KJ.safetensors?download=true"
     else
         echo "Z-Image Turbo fp8 KJ already exists."
@@ -978,7 +1069,7 @@ download_workflow_models() {
     ZIMAGE_GGUF="$DIFFUSION_MODELS_DIR/z-image/z-image-turbo-q4_k_s.gguf"
     if [ ! -f "$ZIMAGE_GGUF" ]; then
         echo "Downloading Z-Image Turbo Q4_K_S GGUF (~5 GB)..."
-        wget --progress=bar:force:noscroll -O "$ZIMAGE_GGUF" \
+        download -O "$ZIMAGE_GGUF" \
             "https://huggingface.co/gguf-org/z-image-gguf/resolve/main/z-image-turbo-q4_k_s.gguf?download=true"
     else
         echo "Z-Image Turbo GGUF already exists."
@@ -988,7 +1079,7 @@ download_workflow_models() {
     QWEN_GGUF="$TEXT_ENCODERS_DIR/Qwen3-4B-Q8_0.gguf"
     if [ ! -f "$QWEN_GGUF" ]; then
         echo "Downloading Qwen3-4B Q8 GGUF text encoder (official)..."
-        wget --progress=bar:force:noscroll -O "$QWEN_GGUF" \
+        download -O "$QWEN_GGUF" \
             "https://huggingface.co/Qwen/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q8_0.gguf?download=true"
     else
         echo "Qwen3-4B GGUF text encoder already exists."
@@ -997,18 +1088,18 @@ download_workflow_models() {
     # Optional uncensored community encoders (APEXFORGE_UNCENSORED_ENCODERS=true).
     # Select them in the CLIPLoader / CLIPLoaderGGUF node of the Z-Image workflows.
     if [ "$APEXFORGE_UNCENSORED_ENCODERS" = "true" ]; then
-        QWEN_ABLIT="$TEXT_ENCODERS_DIR/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors"
+        QWEN_ABLIT="$TEXT_ENCODERS_DIR/Huihui-Qwen3-4B-abliterated-v2.Q8_0.gguf"
         if [ ! -f "$QWEN_ABLIT" ]; then
-            echo "Downloading uncensored Qwen3-4B fp8 text encoder (abliterated)..."
-            wget --progress=bar:force:noscroll -O "$QWEN_ABLIT" \
-                "https://huggingface.co/silveroxides/Qwen3-4B-ComfyQuants-SingleFiles/resolve/main/Huihui-Qwen3-4B-abliterated-v2_fp8mixed.safetensors?download=true"
+            echo "Downloading uncensored Qwen3-4B GGUF text encoder (abliterated q8)..."
+            download -O "$QWEN_ABLIT" \
+                "https://huggingface.co/mradermacher/Huihui-Qwen3-4B-abliterated-v2-GGUF/resolve/main/Huihui-Qwen3-4B-abliterated-v2.Q8_0.gguf?download=true"
         else
             echo "Uncensored Qwen3-4B fp8 already exists."
         fi
         QWEN_HERETIC="$TEXT_ENCODERS_DIR/qwen-4b-zimage-heretic-q8.gguf"
         if [ ! -f "$QWEN_HERETIC" ]; then
             echo "Downloading uncensored Qwen3-4B GGUF text encoder (heretic q8)..."
-            wget --progress=bar:force:noscroll -O "$QWEN_HERETIC" \
+            download -O "$QWEN_HERETIC" \
                 "https://huggingface.co/Lockout/qwen3-4b-heretic-zimage/resolve/main/qwen-4b-zimage-heretic-q8.gguf?download=true"
         else
             echo "Uncensored Qwen3-4B GGUF already exists."
@@ -1022,7 +1113,7 @@ download_workflow_models() {
     CANNY_CN="$COMFYUI_DIR/models/controlnet/sd15/control_v11p_sd15_canny_fp16.safetensors"
     if [ ! -f "$CANNY_CN" ]; then
         echo "Downloading ControlNet SD1.5 Canny fp16..."
-        wget --progress=bar:force:noscroll -O "$CANNY_CN" \
+        download -O "$CANNY_CN" \
             "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_canny_fp16.safetensors?download=true"
     else
         echo "ControlNet Canny SD1.5 already exists."
@@ -1031,7 +1122,7 @@ download_workflow_models() {
     DEPTH_CN="$COMFYUI_DIR/models/controlnet/sd15/control_v11f1p_sd15_depth_fp16.safetensors"
     if [ ! -f "$DEPTH_CN" ]; then
         echo "Downloading ControlNet SD1.5 Depth fp16..."
-        wget --progress=bar:force:noscroll -O "$DEPTH_CN" \
+        download -O "$DEPTH_CN" \
             "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11f1p_sd15_depth_fp16.safetensors?download=true"
     else
         echo "ControlNet Depth SD1.5 already exists."
@@ -1040,7 +1131,7 @@ download_workflow_models() {
     POSE_CN="$COMFYUI_DIR/models/controlnet/sd15/control_v11p_sd15_openpose_fp16.safetensors"
     if [ ! -f "$POSE_CN" ]; then
         echo "Downloading ControlNet SD1.5 OpenPose fp16..."
-        wget --progress=bar:force:noscroll -O "$POSE_CN" \
+        download -O "$POSE_CN" \
             "https://huggingface.co/comfyanonymous/ControlNet-v1-1_fp16_safetensors/resolve/main/control_v11p_sd15_openpose_fp16.safetensors?download=true"
     else
         echo "ControlNet OpenPose SD1.5 already exists."
@@ -1053,7 +1144,7 @@ download_workflow_models() {
     ZIMAGE_CN="$COMFYUI_DIR/models/model_patches/Z-Image-Turbo-Fun-Controlnet-Union.safetensors"
     if [ ! -f "$ZIMAGE_CN" ]; then
         echo "Downloading Z-Image ControlNet Union model patch..."
-        wget --progress=bar:force:noscroll -O "$ZIMAGE_CN" \
+        download -O "$ZIMAGE_CN" \
             "https://huggingface.co/alibaba-pai/Z-Image-Turbo-Fun-Controlnet-Union/resolve/main/Z-Image-Turbo-Fun-Controlnet-Union.safetensors?download=true"
     else
         echo "Z-Image ControlNet Union already exists."
@@ -1070,7 +1161,7 @@ download_workflow_models() {
     WAN21_I2V_GGUF="$DIFFUSION_MODELS_DIR/wan2.1-i2v-14b-480p-Q4_0.gguf"
     if [ ! -f "$WAN21_I2V_GGUF" ]; then
         echo "Downloading Wan2.1 I2V 14B GGUF Q4_0 (~9 GB)..."
-        wget --progress=bar:force:noscroll -O "$WAN21_I2V_GGUF" \
+        download -O "$WAN21_I2V_GGUF" \
             "https://huggingface.co/city96/Wan2.1-I2V-14B-480P-gguf/resolve/main/wan2.1-i2v-14b-480p-Q4_0.gguf?download=true"
     else
         echo "Wan2.1 I2V GGUF already exists."
@@ -1080,7 +1171,7 @@ download_workflow_models() {
     IT_SINGLE_GGUF="$DIFFUSION_MODELS_DIR/Wan2_1-InfiniteTalk_Single_Q8.gguf"
     if [ ! -f "$IT_SINGLE_GGUF" ]; then
         echo "Downloading InfiniteTalk Single Q8 GGUF..."
-        wget --progress=bar:force:noscroll -O "$IT_SINGLE_GGUF" \
+        download -O "$IT_SINGLE_GGUF" \
             "https://huggingface.co/Kijai/WanVideo_comfy_GGUF/resolve/main/InfiniteTalk/Wan2_1-InfiniteTalk_Single_Q8.gguf?download=true"
     else
         echo "InfiniteTalk Single GGUF already exists."
@@ -1090,7 +1181,7 @@ download_workflow_models() {
     IT_MULTI_GGUF="$DIFFUSION_MODELS_DIR/Wan2_1-InfiniteTalk_Multi_Q8.gguf"
     if [ ! -f "$IT_MULTI_GGUF" ]; then
         echo "Downloading InfiniteTalk Multi Q8 GGUF..."
-        wget --progress=bar:force:noscroll -O "$IT_MULTI_GGUF" \
+        download -O "$IT_MULTI_GGUF" \
             "https://huggingface.co/Kijai/WanVideo_comfy_GGUF/resolve/main/InfiniteTalk/Wan2_1-InfiniteTalk_Multi_Q8.gguf?download=true"
     else
         echo "InfiniteTalk Multi GGUF already exists."
@@ -1104,7 +1195,7 @@ download_workflow_models() {
     WAV2VEC_SF="$COMFYUI_DIR/models/wav2vec2/wav2vec2-chinese-base_fp16.safetensors"
     if [ ! -f "$WAV2VEC_SF" ]; then
         echo "Downloading wav2vec2-chinese-base fp16 safetensors..."
-        wget --progress=bar:force:noscroll -O "$WAV2VEC_SF" \
+        download -O "$WAV2VEC_SF" \
             "https://huggingface.co/Kijai/wav2vec2_safetensors/resolve/main/wav2vec2-chinese-base_fp16.safetensors?download=true"
     else
         echo "wav2vec2 safetensors already exists."
@@ -1119,7 +1210,7 @@ download_workflow_models() {
     UMT5_CLIP="$COMFYUI_DIR/models/clip/umt5-xxl-enc-bf16.safetensors"
     if [ ! -f "$UMT5_CLIP" ]; then
         echo "Downloading UMT5 XXL text encoder for WanVideoWrapper (models/clip/)..."
-        wget --progress=bar:force:noscroll -O "$UMT5_CLIP" \
+        download -O "$UMT5_CLIP" \
             "https://huggingface.co/ALGOTECH/WanVideo_comfy/resolve/main/umt5-xxl-enc-bf16.safetensors?download=true"
     else
         echo "UMT5 clip encoder already exists."
@@ -1131,7 +1222,7 @@ download_workflow_models() {
     WAN22_LORA_LOW="$COMFYUI_DIR/models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"
     if [ ! -f "$WAN22_LORA_LOW" ]; then
         echo "Downloading Wan2.2 LightX2V low noise LoRA..."
-        wget --progress=bar:force:noscroll -O "$WAN22_LORA_LOW" \
+        download -O "$WAN22_LORA_LOW" \
             "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors?download=true"
     else
         echo "Wan2.2 LightX2V low noise LoRA already exists."
@@ -1140,7 +1231,7 @@ download_workflow_models() {
     WAN22_LORA_HIGH="$COMFYUI_DIR/models/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors"
     if [ ! -f "$WAN22_LORA_HIGH" ]; then
         echo "Downloading Wan2.2 LightX2V high noise LoRA..."
-        wget --progress=bar:force:noscroll -O "$WAN22_LORA_HIGH" \
+        download -O "$WAN22_LORA_HIGH" \
             "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors?download=true"
     else
         echo "Wan2.2 LightX2V high noise LoRA already exists."
@@ -1153,7 +1244,7 @@ download_workflow_models() {
     CAKE_LORA="$COMFYUI_DIR/models/loras/sd15/CakeStyle.safetensors"
     if [ ! -f "$CAKE_LORA" ]; then
         echo "Downloading CakeStyle SD1.5 LoRA (demo asset for Juggernaut LoRA workflow)..."
-        wget --progress=bar:force:noscroll -O "$CAKE_LORA" \
+        download -O "$CAKE_LORA" \
             "https://huggingface.co/mnemic/CakeStyle-SD1.5-LoRA/resolve/main/CakeStyle.safetensors?download=true"
     else
         echo "CakeStyle LoRA already exists."
@@ -1307,6 +1398,7 @@ configure_manager
 install_sageattention
 install_custom_nodes
 setup_workflows
+remove_broken_downloads
 download_model
 download_zimage_models
 download_zimage_loras
