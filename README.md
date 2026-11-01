@@ -57,6 +57,9 @@ Each release is tagged (`v1.1.0`, …) on GitHub and Docker Hub (`alexharte/apex
 - Civitai key sent as a request header and supported via RunPod Secrets.
 - Z-Image workflows use the official Qwen3-4B text encoders; uncensored encoders are opt-in.
 - Workflows downloaded from the matching release tag.
+- SageAttention builds for the pod's own GPU and is actually enabled at launch.
+- Failed model downloads are retried on the next boot instead of leaving a broken file.
+- Fixed workflows: MultiTalk (speaker masks), InfiniteTalk (transformers v5 audio patch), RIFE (rebuilt on ComfyUI core nodes; silent videos work), CodeFormer (saves output), Z-Image seeds, ACE-Step download link.
 
 ## Credits
 
