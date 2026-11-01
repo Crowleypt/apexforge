@@ -1,6 +1,7 @@
 {
-  "last_node_id": 4,
-  "last_link_id": 3,
+  "revision": 0,
+  "last_node_id": 6,
+  "last_link_id": 4,
   "nodes": [
     {
       "id": 5,
@@ -25,6 +26,9 @@
       "widgets_values": [
         "# \u26a1 ApexForge \u2014 CodeFormer \u2014 Face Restoration\n\n---\n\n## \ud83d\udfe3 FaceRestoreModelLoader\n**Model:** `codeformer.pth`\n\ud83d\udcc1 **Location:** `ComfyUI/models/facerestore_models/`\n> Best face restoration \u2014 works great on talking avatar outputs\n\n---\n\n## \ud83e\udde9 Required Custom Nodes\n- facerestore_cf\n\n---\n\n## \ud83d\udca1 Tips\n- Fidelity weight 0.5 = balanced restore vs original. Lower = more aggressive fix\n- Run this after InfiniteTalk/MultiTalk to clean up face artifacts\n- GFPGANv1.4.pth also pre-installed for faster, lighter restoration\n\n---\n\n## \ud83d\udcda ApexForge by Alex Harte\n\ud83c\udf10 **Guides & updates:** https://alexanderharte.com\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
       ],
+      "widgets_values_named": {
+        "text": "# \u26a1 ApexForge \u2014 CodeFormer \u2014 Face Restoration\n\n---\n\n## \ud83d\udfe3 FaceRestoreModelLoader\n**Model:** `codeformer.pth`\n\ud83d\udcc1 **Location:** `ComfyUI/models/facerestore_models/`\n> Best face restoration \u2014 works great on talking avatar outputs\n\n---\n\n## \ud83e\udde9 Required Custom Nodes\n- facerestore_cf\n\n---\n\n## \ud83d\udca1 Tips\n- Fidelity weight 0.5 = balanced restore vs original. Lower = more aggressive fix\n- Run this after InfiniteTalk/MultiTalk to clean up face artifacts\n- GFPGANv1.4.pth also pre-installed for faster, lighter restoration\n\n---\n\n## \ud83d\udcda ApexForge by Alex Harte\n\ud83c\udf10 **Guides & updates:** https://alexanderharte.com\n\ud83d\ude80 **All models are pre-installed on your pod.**\n\ud83c\udfa8 **Just load this workflow and start generating.**"
+      },
       "color": "#231535",
       "bgcolor": "#3f2460"
     },
@@ -40,17 +44,28 @@
         58
       ],
       "flags": {},
-      "order": 0,
+      "order": 1,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "localized_name": "model_name",
+          "name": "model_name",
+          "type": "COMBO",
+          "widget": {
+            "name": "model_name"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
+          "localized_name": "FACERESTORE_MODEL",
           "name": "FACERESTORE_MODEL",
           "type": "FACERESTORE_MODEL",
+          "slot_index": 0,
           "links": [
             1
-          ],
-          "slot_index": 0
+          ]
         }
       ],
       "properties": {
@@ -58,7 +73,10 @@
       },
       "widgets_values": [
         "codeformer.pth"
-      ]
+      ],
+      "widgets_values_named": {
+        "model_name": "codeformer.pth"
+      }
     },
     {
       "id": 3,
@@ -72,11 +90,31 @@
         377.95501708984375
       ],
       "flags": {},
-      "order": 1,
+      "order": 2,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "localized_name": "image",
+          "name": "image",
+          "type": "COMBO",
+          "widget": {
+            "name": "image"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "choose file to upload",
+          "name": "upload",
+          "type": "IMAGEUPLOAD",
+          "widget": {
+            "name": "upload"
+          },
+          "link": null
+        }
+      ],
       "outputs": [
         {
+          "localized_name": "IMAGE",
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
@@ -84,6 +122,7 @@
           ]
         },
         {
+          "localized_name": "MASK",
           "name": "MASK",
           "type": "MASK",
           "links": null
@@ -95,7 +134,11 @@
       "widgets_values": [
         "ComfyUI_00639_.png",
         "image"
-      ]
+      ],
+      "widgets_values_named": {
+        "image": "ComfyUI_00639_.png",
+        "upload": "image"
+      }
     },
     {
       "id": 2,
@@ -109,28 +152,49 @@
         102
       ],
       "flags": {},
-      "order": 2,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
+          "localized_name": "facerestore_model",
           "name": "facerestore_model",
           "type": "FACERESTORE_MODEL",
           "link": 1
         },
         {
+          "localized_name": "image",
           "name": "image",
           "type": "IMAGE",
           "link": 2
+        },
+        {
+          "localized_name": "facedetection",
+          "name": "facedetection",
+          "type": "COMBO",
+          "widget": {
+            "name": "facedetection"
+          },
+          "link": null
+        },
+        {
+          "localized_name": "codeformer_fidelity",
+          "name": "codeformer_fidelity",
+          "type": "FLOAT",
+          "widget": {
+            "name": "codeformer_fidelity"
+          },
+          "link": null
         }
       ],
       "outputs": [
         {
+          "localized_name": "IMAGE",
           "name": "IMAGE",
           "type": "IMAGE",
+          "slot_index": 0,
           "links": [
-            3
-          ],
-          "slot_index": 0
+            4
+          ]
         }
       ],
       "properties": {
@@ -139,34 +203,58 @@
       "widgets_values": [
         "retinaface_resnet50",
         0.5
-      ]
+      ],
+      "widgets_values_named": {
+        "facedetection": "retinaface_resnet50",
+        "codeformer_fidelity": 0.5
+      }
     },
     {
-      "id": 4,
-      "type": "PreviewImage",
+      "id": 6,
+      "type": "SaveImage",
       "pos": [
         2519.566162109375,
         1904.9365234375
       ],
       "size": [
-        314.74957275390625,
-        322.6661682128906
+        270,
+        58
       ],
       "flags": {},
-      "order": 3,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
+          "localized_name": "images",
           "name": "images",
           "type": "IMAGE",
-          "link": 3
+          "link": 4
+        },
+        {
+          "localized_name": "filename_prefix",
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
         }
       ],
-      "outputs": [],
-      "properties": {
-        "Node name for S&R": "PreviewImage"
-      },
-      "widgets_values": []
+      "outputs": [
+        {
+          "localized_name": "images",
+          "name": "images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {},
+      "widgets_values": [
+        "face_restored"
+      ],
+      "widgets_values_named": {
+        "filename_prefix": "face_restored"
+      }
     }
   ],
   "links": [
@@ -187,10 +275,10 @@
       "IMAGE"
     ],
     [
-      3,
+      4,
       2,
       0,
-      4,
+      6,
       0,
       "IMAGE"
     ]

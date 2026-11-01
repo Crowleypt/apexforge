@@ -156,8 +156,8 @@
         1024,
         1024,
         8,
-        null,
-        null,
+        42,
+        "randomize",
         "z_image_turbo_bf16.safetensors",
         "qwen_3_4b.safetensors",
         "ae.safetensors"

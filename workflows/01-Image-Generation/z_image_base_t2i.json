@@ -185,8 +185,8 @@
         1024,
         25,
         4,
-        null,
-        null,
+        770044821593082,
+        "randomize",
         "z_image_bf16.safetensors",
         "qwen_3_4b.safetensors",
         "ae.safetensors"
