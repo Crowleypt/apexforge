@@ -50,6 +50,9 @@ Extra ComfyUI launch arguments go in `/comfyui/comfyui_args.txt`, one per line.
 
 Each release is tagged (`v1.1.0`, …) on GitHub and Docker Hub (`alexharte/apexforge:v1.1.0`). `:latest` follows the newest release.
 
+### v1.1.1
+- Workflow fixes now reach existing network volumes. Each boot updates the curated workflows you haven't edited. Copies installed by older versions are backed up to `user/default/workflow-backups/` before they're replaced, and workflows you've edited are never overwritten.
+
 ### v1.1.0
 - JupyterLab now requires a password (RunPod's standard pattern).
 - ComfyUI pinned to v0.43.0; custom nodes and SageAttention pinned; no more updates on every boot.

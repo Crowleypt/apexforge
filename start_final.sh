@@ -3,7 +3,7 @@
 # Do NOT use set -e — git pull failures should not kill the whole script
 
 # --- Configuration ---
-APEXFORGE_VERSION="1.1.0"
+APEXFORGE_VERSION="1.1.1"
 COMFYUI_DIR="/comfyui/ComfyUI"
 ARGS_FILE="/comfyui/comfyui_args.txt"
 CHECKPOINTS_DIR="$COMFYUI_DIR/models/checkpoints"
@@ -467,19 +467,53 @@ setup_workflows() {
 
         WF_SRC="$REPO_TMP/workflows"
 
-        # Helper: copy only if destination doesn't exist yet
+        # Track the hash of every workflow we install, so later releases can
+        # update it on existing volumes without overwriting the user's edits.
+        MANIFEST="$WORKFLOWS_DIR/.apexforge-installed.sha256"
+        MANIFEST_NEW="$MANIFEST.new"
+        BACKUP_DIR="$COMFYUI_DIR/user/default/workflow-backups/apexforge-$(date +%Y%m%d-%H%M%S)"
+        touch "$MANIFEST"
+        : > "$MANIFEST_NEW"
+
+        # Helper: install or update one curated workflow.
+        #   missing                 -> install
+        #   unchanged since install -> update to this release
+        #   no record (pre-1.1.1)   -> back up the old copy, then update
+        #   edited by the user      -> keep the user's copy
         cpwf() {
             local src="$1"
             local dest="$2"
+            local rel="${dest#$WORKFLOWS_DIR/}"
+            if [ ! -f "$src" ]; then
+                echo "  ✗ MISSING: $src"
+                return
+            fi
+            local new cur recorded
+            new=$(sha256sum "$src" | cut -d' ' -f1)
             if [ ! -f "$dest" ]; then
-                if [ -f "$src" ]; then
-                    cp "$src" "$dest"
-                    echo "  ✓ $(basename $dest)"
-                else
-                    echo "  ✗ MISSING: $src"
-                fi
+                cp "$src" "$dest"
+                echo "$new  $rel" >> "$MANIFEST_NEW"
+                echo "  ✓ $rel"
+                return
+            fi
+            cur=$(sha256sum "$dest" | cut -d' ' -f1)
+            recorded=$(awk -v r="$rel" 'substr($0, 67) == r { print $1; exit }' "$MANIFEST")
+            if [ "$cur" = "$new" ]; then
+                echo "$new  $rel" >> "$MANIFEST_NEW"
+                echo "  ✓ $rel (up to date)"
+            elif [ "$cur" = "$recorded" ]; then
+                cp "$src" "$dest"
+                echo "$new  $rel" >> "$MANIFEST_NEW"
+                echo "  ↑ $rel (updated)"
+            elif [ -z "$recorded" ]; then
+                mkdir -p "$(dirname "$BACKUP_DIR/$rel")"
+                cp "$dest" "$BACKUP_DIR/$rel"
+                cp "$src" "$dest"
+                echo "$new  $rel" >> "$MANIFEST_NEW"
+                echo "  ↑ $rel (updated; old copy in workflow-backups/)"
             else
-                echo "  ✓ $(basename $dest) already exists"
+                echo "$recorded  $rel" >> "$MANIFEST_NEW"
+                echo "  • $rel (edited — kept your version)"
             fi
         }
 
@@ -552,6 +586,9 @@ setup_workflows() {
              "$WORKFLOWS_DIR/06 - Post Processing/face_restore_codeformer.json"
         cpwf "$WF_SRC/06-Post-Processing/rife_frame_interpolation.json" \
              "$WORKFLOWS_DIR/06 - Post Processing/rife_frame_interpolation.json"
+
+        mv "$MANIFEST_NEW" "$MANIFEST"
+        [ -d "$BACKUP_DIR" ] && echo "Replaced pre-1.1.1 workflows; old copies saved in $BACKUP_DIR"
 
         # Clean up the temp clone
         rm -rf "$REPO_TMP"
