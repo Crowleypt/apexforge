@@ -42,13 +42,17 @@ Extra ComfyUI launch arguments go in `/comfyui/comfyui_args.txt`, one per line.
 ## Security notes
 
 - ComfyUI on port 8188 has no login. Anyone with your pod's proxy URL can use it, so don't share the URL or show it in screenshots. Stop the pod when you're not using it.
-- JupyterLab only runs with a password (see above).
+- JupyterLab only runs with a password (see above). It accepts browser connections from RunPod's proxy addresses (`https://<pod>-8888.proxy.runpod.net`) and blocks other sites, so a page elsewhere can't use your logged-in session.
 - ComfyUI, the custom nodes and SageAttention are pinned to tested versions, so a boot never pulls untested code unless you opt in.
 - ComfyUI-Manager is kept at security level `normal`.
 
 ## Versions
 
 Each release is tagged (`v1.1.0`, …) on GitHub and Docker Hub (`alexharte/apexforge:v1.1.0`). `:latest` follows the newest release.
+
+### v1.1.2
+- JupyterLab works through RunPod's Connect links. Before, the page loaded but terminals and notebooks never connected, because JupyterLab rejected the proxy's address as a different site. JupyterLab now accepts RunPod proxy addresses (`*.proxy.runpod.net`) and still blocks everything else.
+- JupyterLab terminals open in bash instead of sh.
 
 ### v1.1.1
 - Workflow fixes now reach existing network volumes. Each boot updates the curated workflows you haven't edited. Copies installed by older versions are backed up to `user/default/workflow-backups/` before they're replaced, and workflows you've edited are never overwritten.

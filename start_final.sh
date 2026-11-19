@@ -3,7 +3,7 @@
 # Do NOT use set -e — git pull failures should not kill the whole script
 
 # --- Configuration ---
-APEXFORGE_VERSION="1.1.1"
+APEXFORGE_VERSION="1.1.2"
 COMFYUI_DIR="/comfyui/ComfyUI"
 ARGS_FILE="/comfyui/comfyui_args.txt"
 CHECKPOINTS_DIR="$COMFYUI_DIR/models/checkpoints"
@@ -93,12 +93,19 @@ start_jupyter() {
     echo "Starting JupyterLab on port 8888"
     echo "=========================================="
     mkdir -p /comfyui
+    # allow_origin_pat: behind RunPod's proxy the browser's Origin (…-8888.proxy.runpod.net)
+    # differs from the Host Jupyter sees, so without it every POST returns 404 and
+    # websockets close (no terminals, no kernels). Limited to RunPod proxy origins and
+    # anchored at both ends (older jupyter_server prefix-matches); same-origin access
+    # is always allowed. The token is still required.
     nohup jupyter lab \
         --ip=0.0.0.0 \
         --port=8888 \
         --no-browser \
         --allow-root \
         --IdentityProvider.token="$JUPYTER_TOKEN" \
+        --ServerApp.allow_origin_pat='^https://[a-z0-9-]+\.proxy\.runpod\.net$' \
+        --ServerApp.terminado_settings='{"shell_command":["/bin/bash"]}' \
         --ServerApp.root_dir=/comfyui \
         > /comfyui/jupyter.log 2>&1 &
     echo "JupyterLab started on port 8888"
