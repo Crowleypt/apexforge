@@ -3,7 +3,7 @@
 # Do NOT use set -e — git pull failures should not kill the whole script
 
 # --- Configuration ---
-APEXFORGE_VERSION="1.1.1"
+APEXFORGE_VERSION="1.1.2"
 COMFYUI_DIR="/comfyui/ComfyUI"
 ARGS_FILE="/comfyui/comfyui_args.txt"
 CHECKPOINTS_DIR="$COMFYUI_DIR/models/checkpoints"
